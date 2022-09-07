@@ -1,2 +1,1 @@
-# SMG-multimodal-grasping
-Coming soon
+# Coming soon
