@@ -95,8 +95,9 @@ class Trainer(object):
         self.model.train()
 
         # Initialize optimizer
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-4, momentum=0.9, weight_decay=2e-5)
-        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3, betas=(0.9,0.999),eps=1e-8, weight_decay=0)
+        # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-4, momentum=0.9, weight_decay=2e-5)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-4, betas=(0.9,0.999),eps=1e-8, weight_decay=0)
+        
         self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level="O0")
         self.iteration = 0
 
@@ -167,7 +168,7 @@ class Trainer(object):
         # assert(color_heightmap_2x.shape[0:2] == depth_heightmap_2x.shape[0:2])
                 
         # m_color_heightmap_2x = ndimage.zoom(m_color_heightmap, zoom=[2,2,1], order=0)
-        m_depth_heightmap_2x = ndimage.zoom(m_depth_heightmap, zoom=[2,2], order=0)
+        m_depth_heightmap_2x = ndimage.zoom(m_depth_heightmap, zoom=[2,2], order=0) 
         # assert(m_color_heightmap_2x.shape[0:2] == m_depth_heightmap_2x.shape[0:2])
 
         # Add extra padding (to handle rotations inside network)

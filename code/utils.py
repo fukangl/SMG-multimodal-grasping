@@ -9,7 +9,7 @@ from torch.autograd import Variable
 import time
 import matplotlib.pyplot as plt
 
-def get_pointcloud(color_img, depth_img, camera_intrinsics):
+def get_pointcloud(color_img, depth_img, camera_intrinsics): 
 
     # Get depth image size
     im_h = depth_img.shape[0]

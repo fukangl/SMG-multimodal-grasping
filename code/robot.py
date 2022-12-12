@@ -25,7 +25,7 @@ class Robot(object):
         self.sucker_height = 10/1000
         
         # training & testing
-        self.relieve_s_position = [-0.3,-0.6,0.3]
+        self.relieve_s_position = [-0.3,-0.6,0.3] 
         self.relieve_s_position_1 = [-0.3,-0.6,0.2]        
         self.relieve_g_position = [-0.1,-0.6,0.3]
         self.relieve_g_position_1 = [-0.1,-0.6,0.2]       

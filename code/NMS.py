@@ -2,7 +2,7 @@
 import time
 import os,sys
 import numpy as np
-import random
+import random 
 import math
 
 def py_cpu_nms(boxes, pred_score, co_thresh, min_area,max_area):

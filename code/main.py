@@ -475,7 +475,7 @@ def main(args):
          
             # Initialize variables that influence reward
             nonlocal_variables['suction_success'] = 0
-            nonlocal_variables['grasp_success'] = 0
+            nonlocal_variables['grasp_success'] = 0 
             nonlocal_variables['gs_success'] = 0
             # Execute primitive
                                             
