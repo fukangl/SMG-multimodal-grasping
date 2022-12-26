@@ -1,2 +1,0 @@
-datasets-objects filter=lfs diff=lfs merge=lfs -text
-datasets-objects.zip filter=lfs diff=lfs merge=lfs -text
