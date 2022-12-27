@@ -425,18 +425,18 @@ def main(args):
 if __name__ == '__main__':
 
     # --------------- Setup options ---------------
-    parser.add_argument('--is_sim', dest='is_sim', action='store_true', default=True,                                       help='run in simulation?')
+    parser.add_argument('--is_sim', dest='is_sim', action='store_true', default=False,                                      help='run in simulation?')
     parser.add_argument('--obj_mesh_dir', dest='obj_mesh_dir', action='store', default='objects/training',                  help='directory containing 3D mesh files (.obj) of objects to be added to simulation. set to \'training\'  or \'testing\'')
-    parser.add_argument('--num_obj', dest='num_obj', type=int, action='store', default=10,                                   help='number of objects to add to simulation')
+    parser.add_argument('--num_obj', dest='num_obj', type=int, action='store', default=10,                                  help='number of objects to add to simulation')
     parser.add_argument('--heightmap_resolution', dest='heightmap_resolution', type=float, action='store', default=0.002,   help='meters per pixel of heightmap')
     parser.add_argument('--cpu', dest='force_cpu', action='store_true', default=False,                                      help='force code to run in CPU mode')
     parser.add_argument('--is_cluttered', dest='is_cluttered', action='store', default='lightly-cluttered',                 help='set to \'lightly-cluttered\'  or \'highly-cluttered\'')
     
     # ------------- Algorithm options -------------
     parser.add_argument('--method', dest='method', action='store', default='reinforcement',                                 help='set to \'reactive\' (supervised learning) or \'reinforcement\'(DDQN)')
-    parser.add_argument('--is_ets', dest='is_ets', action='store_true', default=True,                                       help='run with Enveloping_then_sucking action?')
+    parser.add_argument('--is_ets', dest='is_ets', action='store_true', default=False,                                      help='run with Enveloping_then_sucking action?')
     parser.add_argument('--future_reward_discount', dest='future_reward_discount', type=float, action='store', default=0.5)
-    parser.add_argument('--explore_rate_decay', dest='explore_rate_decay', action='store_true', default=True)
+    parser.add_argument('--explore_rate_decay', dest='explore_rate_decay', action='store_true', default=False)
    
     # --------------Training or Testing options --------------
     parser.add_argument('--is_testing', dest='is_testing', action='store_true', default=False)
@@ -447,7 +447,7 @@ if __name__ == '__main__':
     
     # ------ Pre-loading and logging options ------
     parser.add_argument('--load_snapshot', dest='load_snapshot', action='store_true', default=False,                        help='load pre-trained snapshot of model?')
-    parser.add_argument('--snapshot_file', dest='snapshot_file', action='store', default=False)
+    parser.add_argument('--snapshot_file', dest='snapshot_file', action='store')
     parser.add_argument('--continue_logging', dest='continue_logging', action='store_true', default=False,                  help='continue logging from previous session?')
     parser.add_argument('--logging_directory', dest='logging_directory', action='store',default='test-10-obj-01.txt')
     
