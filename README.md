@@ -33,10 +33,36 @@ python main.py --is_sim --is_cluttered --explore_rate_decay
 To train an Reactive Enveloping and Sucking Policy (E+S Reactive) in simulation with lightly cluttered environment, run the following:
 
 ```shell
-python main.py --is_sim --is_cluttered --method 'reactive' --explore_rate_decay
+python main.py --is_sim --method 'reactive' --explore_rate_decay
 ```
 
+To train an Reactive Enveloping, Sucking and Enveloping_then_Sucking Policy (E+S+ES Reactive) in simulation with lightly cluttered environment, run the following:
 
+```shell
+python main.py --is_sim --method 'reactive' --is_ets --explore_rate_decay
+```
+
+To train a DRL Enveloping and Sucking Policy (E+S DRL) in simulation with lightly cluttered environment, run the following:
+
+```shell
+python main.py --is_sim --method 'reinforcement' --explore_rate_decay
+```
+
+To train a DRL multimodal grasping policy (E+S+ES DRL(PE+OO)) in simulation with lightly cluttered environment, run the following:
+
+```shell
+python main.py --is_sim --method 'reinforcement' --is_ets --explore_rate_decay
+```
+
+## Evaluation
+
+To test your own pre-trained model, simply change the location of `--snapshot_file`. For example, for testing the pre-trained E+S+ES DRL(PE+OO) model in simulation with lightly cluttered environment, run the following:
+
+```shell
+python main.py --is_sim --method 'reinforcement' --is_ets --explore_rate_decay \
+--is_testing \
+--load_snapshot --snapshot_file 'YOUR-SNAPSHOT-FILE-HERE'
+```
 
 ## Bibtex
 If you find this code useful, please cite:
