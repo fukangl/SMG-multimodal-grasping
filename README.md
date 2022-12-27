@@ -2,7 +2,7 @@
 
 [[Paper]](https://arxiv.org/pdf/2202.12796.pdf)
 
-[Fukang Liu](https://fukangl.github.io/)<sup>1</sup>,[Fuchun Sun](https://scholar.google.com/citations?user=DbviELoAAAAJ&hl=en)<sup>2</sup>,[Bin Fang](https://scholar.google.com/citations?user=5G47IcIAAAAJ&hl=en)<sup>2</sup>,[Xiang Li](https://scholar.google.com/citations?user=6EIX-JQAAAAJ&hl=en)<sup>2</sup>,Songyu Sun<sup>3</sup>,[Huaping Liu](https://scholar.google.com/citations?user=HXnkIkwAAAAJ&hl=en)<sup>2</sup><br/>
+[Fukang Liu](https://fukangl.github.io/)<sup>1,2</sup>,[Fuchun Sun](https://scholar.google.com/citations?user=DbviELoAAAAJ&hl=en)<sup>2</sup>,[Bin Fang](https://scholar.google.com/citations?user=5G47IcIAAAAJ&hl=en)<sup>2</sup>,[Xiang Li](https://scholar.google.com/citations?user=6EIX-JQAAAAJ&hl=en)<sup>2</sup>,Songyu Sun<sup>3</sup>,[Huaping Liu](https://scholar.google.com/citations?user=HXnkIkwAAAAJ&hl=en)<sup>2</sup><br/>
 
 <sup>1</sup>Carnegie Mellon University </br> 
 <sup>2</sup>Tsinghua University </br>
@@ -24,15 +24,17 @@ The implementation requires the following dependencies:
 1. In another terminal window, run the following (example).
 
 ```shell
-python main.py --is_sim --is_cluttered --experience_replay --explore_rate_decay
+python main.py --is_sim --is_cluttered --explore_rate_decay
 ```
-
 
 
 ## Training
 
+To train an Reactive Enveloping and Sucking Policy (E+S Reactive) in simulation with lightly cluttered environment, run the following:
 
-
+```shell
+python main.py --is_sim --is_cluttered --method 'reactive' --explore_rate_decay
+```
 
 
 
