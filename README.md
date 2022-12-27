@@ -17,3 +17,17 @@ The implementation requires the following dependencies:
 
 
 
+## Bibtex
+If you find this code useful, please cite:
+
+```
+@misc{SMG2022,
+    title={Hybrid Robotic Grasping with a Soft Multimodal Gripper and a Deep Multistage Learning Scheme},
+    author={Liu, Fukang and Fang, Bin and Sun, Fuchun and Li, Xiang and Sun, Songyu and Liu, Huaping},
+    journal={arXiv preprint arXiv:2202.12796},
+    year={2022}
+}
+```
+
+## Acknowledgements
+This code was developed using [visual-pushing-grasping](https://github.com/fukangl/visual-pushing-grasping).
