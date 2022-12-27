@@ -30,4 +30,4 @@ If you find this code useful, please cite:
 ```
 
 ## Acknowledgements
-This code was developed using [visual-pushing-grasping](https://github.com/fukangl/visual-pushing-grasping).
+This code was developed using [visual-pushing-grasping](https://github.com/andyzeng/visual-pushing-grasping).
