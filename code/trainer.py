@@ -173,8 +173,8 @@ class Trainer(object):
         m_depth_heightmap_2x =  np.pad(m_depth_heightmap_2x, padding_width, 'constant', constant_values=0)
 
         # Pre-process depth image (normalize)
-        image_mean = [0.01, 0.01, 0.01]
-        image_std = [0.03, 0.03, 0.03]
+        image_mean = [0.0, 0.0, 0.0]
+        image_std = [0.0, 0.0, 0.0]
         depth_heightmap_2x.shape = (depth_heightmap_2x.shape[0], depth_heightmap_2x.shape[1], 1)
         input_depth_image = np.concatenate((depth_heightmap_2x, depth_heightmap_2x, depth_heightmap_2x), axis=2)        
         m_depth_heightmap_2x.shape = (m_depth_heightmap_2x.shape[0], m_depth_heightmap_2x.shape[1], 1)
