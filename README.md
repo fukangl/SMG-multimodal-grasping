@@ -8,6 +8,9 @@
 <sup>2</sup>Tsinghua University </br>
 <sup>3</sup> University of California, Los Angeles </br> 
 
+#### Contact
+If you have any questions, please let me know: [Fukang Liu](https://fukangl.github.io/) fukangl@andrew.cmu.edu
+
 ## Installation
 
 The implementation requires the following dependencies:
@@ -36,11 +39,13 @@ To train an Reactive Enveloping and Sucking Policy (E+S Reactive) in simulation 
 python main.py --is_sim --method 'reactive' --is_pe --is_oo --explore_rate_decay
 ```
 
+
 To train an Reactive Enveloping, Sucking and Enveloping_then_Sucking Policy (E+S+ES Reactive) in simulation with lightly cluttered environment, run the following:
 
 ```shell
 python main.py --is_sim --method 'reactive' --is_ets --is_pe --is_oo --explore_rate_decay
 ```
+
 
 To train a DRL Enveloping and Sucking Policy (E+S DRL) in simulation with lightly cluttered environment, run the following:
 
@@ -55,6 +60,14 @@ To train a DRL multimodal grasping policy (E+S+ES DRL(PE+OO)) in simulation with
 python main.py --is_sim --method 'reinforcement' --is_ets --is_pe --is_oo --explore_rate_decay
 ```
 
+Tranining policies in highly cluttered environment, add `--is_cluttered`. For example, For training a DRL multimodal grasping policy (E+S+ES DRL(PE+OO)) in simulation with highly cluttered environment, run the following:
+
+```shell
+python main.py --is_sim --is_cluttered --method 'reinforcement' --is_ets --is_pe --is_oo --explore_rate_decay
+```
+
+
+
 ## Evaluation
 
 To test your own pre-trained model, simply change the location of `--snapshot_file`. For example, for testing the pre-trained E+S+ES DRL(PE+OO) model in simulation with lightly cluttered environment, run the following:
@@ -66,7 +79,7 @@ python main.py --is_sim --method 'reinforcement' --is_ets --is_pe --is_oo --expl
 ```
 
 To test the three ablation baselines, remove `--is_pe` or `--is_oo`.
-To test a DRL multimodal grasping policy that executes actions without either preenveloping or orientation optimization (E+S+ES DRL) in simulation with lightly cluttered environment, run the following:
+For testing a DRL multimodal grasping policy that executes actions without either preenveloping or orientation optimization (E+S+ES DRL) in simulation with lightly cluttered environment, remove both `--is_pe` and `--is_oo`:
 
 ```shell
 python main.py --is_sim --method 'reinforcement' --is_ets --explore_rate_decay \
@@ -75,7 +88,7 @@ python main.py --is_sim --method 'reinforcement' --is_ets --explore_rate_decay \
 ```
 
 
-To test a DRL multimodal grasping policy that executes actions with only preenveloping (E+S+ES DRL(PE)) in simulation with lightly cluttered environment, run the following:
+For testing a DRL multimodal grasping policy that executes actions with only preenveloping (E+S+ES DRL(PE)) in simulation with lightly cluttered environment, remove `--is_oo`:
 
 ```shell
 python main.py --is_sim --method 'reinforcement' --is_ets --is_pe --explore_rate_decay \
@@ -84,7 +97,7 @@ python main.py --is_sim --method 'reinforcement' --is_ets --is_pe --explore_rate
 ```
 
 
-To test a DRL multimodal grasping policy that executes actions with only orientation optimization (E+S+ES DRL(OO)) in simulation with lightly cluttered environment, run the following:
+To test a DRL multimodal grasping policy that executes actions with only orientation optimization (E+S+ES DRL(OO)) in simulation with lightly cluttered environment, remove `--is_pe`:
 
 ```shell
 python main.py --is_sim --method 'reinforcement' --is_ets --is_oo --explore_rate_decay \
