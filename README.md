@@ -15,6 +15,19 @@ The implementation requires the following dependencies:
 * [Python](https://www.python.org/), [PyTorch](https://pytorch.org/), [NumPy](https://numpy.org/), [OpenCV-Python](https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html), [SciPy](https://scipy.org/), [Matplotlib](https://matplotlib.org/), [CoppeliaSim](https://www.coppeliarobotics.com/)</br> 
 
 
+## Instructions
+
+1. Checkout this repository and download the [datasets](https://github.com/fukangl/SMG-multimodal-grasping/blob/main/datasets-objects.zip).
+
+1. Run CoppeliaSim ().
+
+
+
+## Training
+
+
+
+
 
 
 ## Bibtex
