@@ -19,7 +19,7 @@ The implementation requires the following dependencies:
 
 1. Checkout this repository and download the [datasets](https://github.com/fukangl/SMG-multimodal-grasping/blob/main/datasets-objects.zip).
 
-1. Run CoppeliaSim (navigate to your CoppeliaSim directory and run `./coppeliaSim.sh`). From the main menu, select `File` > `Open scene...`, and open the file `code/simulation/simulation-lc.ttt`(lightly-cluttered) or `simulation-hc.ttt`(highly-cluttered) from this repository. Choose the `Vortex` physics engine for simulation (You can also choose other physics engines that CoppeliaSim supports, but `Vortex` works best for the simulation model of SMG).
+1. Run CoppeliaSim (navigate to your CoppeliaSim directory and run `./coppeliaSim.sh`). From the main menu, select `File` > `Open scene...`, and open the file `code/simulation/simulation-lc.ttt`(lightly-cluttered) or `simulation-hc.ttt`(highly-cluttered) from this repository. Choose the `Vortex` physics engine for simulation (you can also choose other physics engines that CoppeliaSim supports (e.g., `Bullet`, `ODE`), but `Vortex` works best for the simulation model of SMG).
 
 1. In another terminal window, run the following (example).
 
