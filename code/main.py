@@ -39,6 +39,8 @@ def main(args):
     # ------------- Algorithm options -------------
     method = args.method # dueling DQN or Reactive
     is_ets = args.is_ets # run with Enveloping_then_sucking action?
+    is_pe = args.is_pe # run with orientation preenveloping?
+    is_oo = args.is_oo # run with orientation optimization?
     future_reward_discount = args.future_reward_discount
     explore_rate_decay = args.explore_rate_decay
     
@@ -251,7 +253,8 @@ def main(args):
                 poly = np.array(box_mask_cors_448[bestg_id[0]],np.int32).reshape(-1,1,2)
                 label_mask = color_448.copy()               
                 logger.save_action_masks(trainer.iteration,label_mask,'0')               
-                primitive_grasp_position, grasp_rotation_angle, grasp_open_distance = utils.get_best_grasp_angle(box_mask_cors, bestg_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)                                                               
+                primitive_grasp_position, grasp_rotation_angle, grasp_open_distance = utils.get_best_grasp_angle(is_pe, box_mask_cors, bestg_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)                                                               
+                
                 
             elif nonlocal_variables['primitive_action'] == 'suction':
                 nonlocal_variables['best_pix_ind'] = bests_pix
@@ -261,7 +264,7 @@ def main(args):
                 poly = np.array(box_mask_cors_448[bests_id[0]],np.int32).reshape(-1,1,2)
                 label_mask = color_448.copy()
                 logger.save_action_masks(trainer.iteration,label_mask,'0') 
-                primitive_suction_position, suction_rotation_angle = utils.get_best_suction_angle(objects_number, masks_cter, box_mask_cors, bests_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)                                            
+                primitive_suction_position, suction_rotation_angle = utils.get_best_suction_angle(is_oo, objects_number, masks_cter, box_mask_cors, bests_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)                                            
                            
             elif nonlocal_variables['primitive_action'] == 'grasp_then_suction':
                 nonlocal_variables['best_pix_ind'] = bestgs_pix                
@@ -272,7 +275,7 @@ def main(args):
                 poly_s = np.array(box_mask_cors_448[bestgs_s_id[0]],np.int32).reshape(-1,1,2)
                 label_mask = color_448.copy()
                 logger.save_action_masks(trainer.iteration,label_mask,'0')
-                primitive_grasp_position, grasp_rotation_angle, grasp_open_distance = utils.get_best_grasp_angle(box_mask_cors, bestgs_g_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
+                primitive_grasp_position, grasp_rotation_angle, grasp_open_distance = utils.get_best_grasp_angle(is_pe, box_mask_cors, bestgs_g_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
                                 
                 # predicted suction angle after a successful grasping
                 if objects_number > 2:
@@ -287,9 +290,9 @@ def main(args):
                     box_mask_cors_1 = np.asarray(box_mask_cors_1)
                     if bestgs_g_id[0] < bestgs_s_id[0]:
                         bestgs_s_id[0] -=1
-                    primitive_suction_position, suction_rotation_angle_1 = utils.get_best_suction_angle(objects_number-1, masks_cter_1, box_mask_cors_1, bestgs_s_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
+                    primitive_suction_position, suction_rotation_angle_1 = utils.get_best_suction_angle(is_oo, objects_number-1, masks_cter_1, box_mask_cors_1, bestgs_s_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
                 else:   
-                    primitive_suction_position, suction_rotation_angle_1 = utils.get_best_suction_angle(objects_number, masks_cter, box_mask_cors, bestgs_s_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
+                    primitive_suction_position, suction_rotation_angle_1 = utils.get_best_suction_angle(is_oo, objects_number, masks_cter, box_mask_cors, bestgs_s_id, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
                 if objects_number == 2:
                     suction_rotation_angle_1 = 0
               
@@ -434,7 +437,9 @@ if __name__ == '__main__':
     
     # ------------- Algorithm options -------------
     parser.add_argument('--method', dest='method', action='store', default='reinforcement',                                 help='set to \'reactive\' (supervised learning) or \'reinforcement\'(DDQN)')
-    parser.add_argument('--is_ets', dest='is_ets', action='store_true', default=False,                                      help='run with Enveloping_then_sucking action?')
+    parser.add_argument('--is_ets', dest='is_ets', action='store_true', default=False,                                      help='run with Enveloping_then_Sucking action?')
+    parser.add_argument('--is_pe', dest='is_pe', action='store_true', default=False,                                        help='run with preenveloping?')
+    parser.add_argument('--is_oo', dest='is_oo', action='store_true', default=False,                                        help='run with orientation optimization?')  
     parser.add_argument('--future_reward_discount', dest='future_reward_discount', type=float, action='store', default=0.5)
     parser.add_argument('--explore_rate_decay', dest='explore_rate_decay', action='store_true', default=False)
    

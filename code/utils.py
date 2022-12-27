@@ -313,54 +313,61 @@ class CrossEntropyLoss2d(nn.Module):
         return self.nll_loss(F.log_softmax(inputs, dim=1), targets)
 
 
-def get_best_grasp_angle(box_mask_cors, bestg_id, A_htor, cam_intrinsics, cam_pose, depth_img):
+def get_best_grasp_angle(is_pe, box_mask_cors, bestg_id, A_htor, cam_intrinsics, cam_pose, depth_img):
     # grasp_center
     grasp_center_pix = [0,
                         (box_mask_cors[bestg_id[0]][0][1] + box_mask_cors[bestg_id[0]][1][1] + box_mask_cors[bestg_id[0]][2][1] + box_mask_cors[bestg_id[0]][3][1])/4,
                         (box_mask_cors[bestg_id[0]][0][0] + box_mask_cors[bestg_id[0]][1][0] + box_mask_cors[bestg_id[0]][2][0] + box_mask_cors[bestg_id[0]][3][0])/4]
     grasp_center_pix = np.array(grasp_center_pix).astype(int)
     grasp_center_cor = global_position(grasp_center_pix, A_htor, cam_intrinsics, cam_pose, depth_img)
-    # grasp angle and open distance    
-    box_glob_g_cors, g_angle_selected_box = np.zeros((4,3)), np.zeros((2,3))                                        
-    for i in range(4):
-        box_pix_g = [0,box_mask_cors[bestg_id[0]][i][1],box_mask_cors[bestg_id[0]][i][0]]
-        box_pix_g = np.array(box_pix_g).astype(int)                    
-        box_glob_g_cors[i] = global_position(box_pix_g, A_htor, cam_intrinsics, cam_pose, depth_img)                       
     
-    g_id_distance_01 = math.sqrt((box_glob_g_cors[0][0] - box_glob_g_cors[1][0])**2 + (box_glob_g_cors[0][1] - box_glob_g_cors[1][1])**2)    
-    g_id_distance_12 = math.sqrt((box_glob_g_cors[2][0] - box_glob_g_cors[1][0])**2 + (box_glob_g_cors[2][1] - box_glob_g_cors[1][1])**2)      
     
-    if g_id_distance_01 > g_id_distance_12:
-        grasp_open_distance = g_id_distance_12 *min(1.2,g_id_distance_01/g_id_distance_12)
-        if box_glob_g_cors[0][1] == box_glob_g_cors[1][1]:
-            g_angle_selected_box[0][2] = 0
-        elif box_glob_g_cors[0][1] > box_glob_g_cors[1][1]:
-            g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[0][0]-box_glob_g_cors[1][0])/g_id_distance_01)
-        else:
-            g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[1][0]-box_glob_g_cors[0][0])/g_id_distance_01)    
+    # grasp angle and open distance        
+    grasp_rotation_angle = 0
+    grasp_open_distance = 2. # larger than the threshold
+    if is_pe:
+        box_glob_g_cors, g_angle_selected_box = np.zeros((4,3)), np.zeros((2,3))                                        
+        for i in range(4):
+            box_pix_g = [0,box_mask_cors[bestg_id[0]][i][1],box_mask_cors[bestg_id[0]][i][0]]
+            box_pix_g = np.array(box_pix_g).astype(int)                    
+            box_glob_g_cors[i] = global_position(box_pix_g, A_htor, cam_intrinsics, cam_pose, depth_img)                       
         
-    else:
-        grasp_open_distance = g_id_distance_01 *min(1.2,g_id_distance_12/g_id_distance_01)
-        if box_glob_g_cors[2][1] == box_glob_g_cors[1][1]:
-            g_angle_selected_box[0][2] = 0
-        elif box_glob_g_cors[2][1] > box_glob_g_cors[1][1]:
-            g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[2][0]-box_glob_g_cors[1][0])/g_id_distance_12)
-        else:
-            g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[1][0]-box_glob_g_cors[2][0])/g_id_distance_12)
+        g_id_distance_01 = math.sqrt((box_glob_g_cors[0][0] - box_glob_g_cors[1][0])**2 + (box_glob_g_cors[0][1] - box_glob_g_cors[1][1])**2)    
+        g_id_distance_12 = math.sqrt((box_glob_g_cors[2][0] - box_glob_g_cors[1][0])**2 + (box_glob_g_cors[2][1] - box_glob_g_cors[1][1])**2)      
+        
+        if g_id_distance_01 > g_id_distance_12:
+            grasp_open_distance = g_id_distance_12 *min(1.2,g_id_distance_01/g_id_distance_12)
+            if box_glob_g_cors[0][1] == box_glob_g_cors[1][1]:
+                g_angle_selected_box[0][2] = 0
+            elif box_glob_g_cors[0][1] > box_glob_g_cors[1][1]:
+                g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[0][0]-box_glob_g_cors[1][0])/g_id_distance_01)
+            else:
+                g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[1][0]-box_glob_g_cors[0][0])/g_id_distance_01)    
             
-    # ax = plt.subplot(111,projection='polar')
-    # ax.set_theta_offset(np.pi/2)
-    # ax.set_thetagrids(np.arange(0.,360.,30.))                
-    # selected_r = np.arange(0,1,0.01)
-    # selected_t = np.ones((100,))*g_angle_selected_box[0][2]
-    # ax.plot(selected_t, selected_r, linewidth=3, color='red')
-    # plt.show() 
+        else:
+            grasp_open_distance = g_id_distance_01 *min(1.2,g_id_distance_12/g_id_distance_01)
+            if box_glob_g_cors[2][1] == box_glob_g_cors[1][1]:
+                g_angle_selected_box[0][2] = 0
+            elif box_glob_g_cors[2][1] > box_glob_g_cors[1][1]:
+                g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[2][0]-box_glob_g_cors[1][0])/g_id_distance_12)
+            else:
+                g_angle_selected_box[0][2] = math.acos((box_glob_g_cors[1][0]-box_glob_g_cors[2][0])/g_id_distance_12)
+                
+        grasp_rotation_angle = g_angle_selected_box[0][2]
+        
+        # ax = plt.subplot(111,projection='polar')
+        # ax.set_theta_offset(np.pi/2)
+        # ax.set_thetagrids(np.arange(0.,360.,30.))                
+        # selected_r = np.arange(0,1,0.01)
+        # selected_t = np.ones((100,))*g_angle_selected_box[0][2]
+        # ax.plot(selected_t, selected_r, linewidth=3, color='red')
+        # plt.show() 
 
-    return grasp_center_cor, g_angle_selected_box[0][2], grasp_open_distance
+    return grasp_center_cor, grasp_rotation_angle, grasp_open_distance
 
 
 
-def get_best_suction_angle(objects_number, masks_cter, box_mask_cors, bests_id, A_htor, cam_intrinsics, cam_pose, depth_img):
+def get_best_suction_angle(is_oo, objects_number, masks_cter, box_mask_cors, bests_id, A_htor, cam_intrinsics, cam_pose, depth_img):
                 
     # robot cors of the sucking center
     suction_center_pix = [0,
@@ -369,236 +376,240 @@ def get_best_suction_angle(objects_number, masks_cter, box_mask_cors, bests_id, 
     suction_center_pix = np.array(suction_center_pix).astype(int)
     suction_center_cor = global_position(suction_center_pix, A_htor, cam_intrinsics, cam_pose, depth_img)        
     
-    angle_val = np.ones((360,))
-    object_val = np.ones((objects_number,3))
-    box_glob_s_cors, center_glob_s_cors, height_s_aver, distance_s_aver = np.zeros((objects_number,4,3)),np.zeros((objects_number,3)),np.zeros((objects_number)),np.zeros((objects_number))
-    # average height/distance of each object
-    for i in range(objects_number):
-        center_glob_s_cors[i] = global_position([0,masks_cter[i,1],masks_cter[i,0]], A_htor, cam_intrinsics, cam_pose, depth_img)                                        
-        for j in range(4):
-            box_pix_s = [0,box_mask_cors[i][j][1],box_mask_cors[i][j][0]]
-            box_pix_s = np.array(box_pix_s).astype(int)                    
-            box_glob_s_cors[i][j] = global_position(box_pix_s, A_htor, cam_intrinsics, cam_pose, depth_img)               
-    for i in range(objects_number):
-        height_s_aver[i] = max(center_glob_s_cors[i][2], box_glob_s_cors[i][0][2], box_glob_s_cors[i][1][2], box_glob_s_cors[i][2][2], box_glob_s_cors[i][3][2])
-        distance_s_aver[i] = math.sqrt((center_glob_s_cors[i][0] - center_glob_s_cors[bests_id[0]][0])**2 + 
-                                       (center_glob_s_cors[i][1] - center_glob_s_cors[bests_id[0]][1])**2)                
-   
-    # open angle 
-    for object_id in range(objects_number):
-        if object_id != bests_id[0]:
-            angle_point = np.zeros((4))
-            box_points = np.zeros((4,2))
-            box_points[0] = [box_mask_cors[object_id][0][0],box_mask_cors[object_id][0][1]]
-            box_points[1] = [box_mask_cors[object_id][1][0],box_mask_cors[object_id][1][1]]
-            box_points[2] = [box_mask_cors[object_id][2][0],box_mask_cors[object_id][2][1]]
-            box_points[3] = [box_mask_cors[object_id][3][0],box_mask_cors[object_id][3][1]]
-            for points_num in range(4):                        
-                if box_points[points_num][0] == masks_cter[bests_id[0]][0]:
-                    if box_points[points_num][1] > masks_cter[bests_id[0]][1]:
-                        angle_point[points_num] = np.pi
-                    else:
-                        angle_point[points_num] = 0
-                if box_points[points_num][1] == masks_cter[bests_id[0]][1]:
+    suction_rotation_angle = 0
+    if is_oo:   
+        angle_val = np.ones((360,))
+        object_val = np.ones((objects_number,3))
+        box_glob_s_cors, center_glob_s_cors, height_s_aver, distance_s_aver = np.zeros((objects_number,4,3)),np.zeros((objects_number,3)),np.zeros((objects_number)),np.zeros((objects_number))
+        # average height/distance of each object
+        for i in range(objects_number):
+            center_glob_s_cors[i] = global_position([0,masks_cter[i,1],masks_cter[i,0]], A_htor, cam_intrinsics, cam_pose, depth_img)                                        
+            for j in range(4):
+                box_pix_s = [0,box_mask_cors[i][j][1],box_mask_cors[i][j][0]]
+                box_pix_s = np.array(box_pix_s).astype(int)                    
+                box_glob_s_cors[i][j] = global_position(box_pix_s, A_htor, cam_intrinsics, cam_pose, depth_img)               
+        for i in range(objects_number):
+            height_s_aver[i] = max(center_glob_s_cors[i][2], box_glob_s_cors[i][0][2], box_glob_s_cors[i][1][2], box_glob_s_cors[i][2][2], box_glob_s_cors[i][3][2])
+            distance_s_aver[i] = math.sqrt((center_glob_s_cors[i][0] - center_glob_s_cors[bests_id[0]][0])**2 + 
+                                           (center_glob_s_cors[i][1] - center_glob_s_cors[bests_id[0]][1])**2)                
+       
+        # open angle 
+        for object_id in range(objects_number):
+            if object_id != bests_id[0]:
+                angle_point = np.zeros((4))
+                box_points = np.zeros((4,2))
+                box_points[0] = [box_mask_cors[object_id][0][0],box_mask_cors[object_id][0][1]]
+                box_points[1] = [box_mask_cors[object_id][1][0],box_mask_cors[object_id][1][1]]
+                box_points[2] = [box_mask_cors[object_id][2][0],box_mask_cors[object_id][2][1]]
+                box_points[3] = [box_mask_cors[object_id][3][0],box_mask_cors[object_id][3][1]]
+                for points_num in range(4):                        
+                    if box_points[points_num][0] == masks_cter[bests_id[0]][0]:
+                        if box_points[points_num][1] > masks_cter[bests_id[0]][1]:
+                            angle_point[points_num] = np.pi
+                        else:
+                            angle_point[points_num] = 0
+                    if box_points[points_num][1] == masks_cter[bests_id[0]][1]:
+                        if box_points[points_num][0] < masks_cter[bests_id[0]][0]:
+                            angle_point[points_num] = np.pi/2
+                        else:
+                            angle_point[points_num] = 3*np.pi/2
                     if box_points[points_num][0] < masks_cter[bests_id[0]][0]:
-                        angle_point[points_num] = np.pi/2
-                    else:
-                        angle_point[points_num] = 3*np.pi/2
-                if box_points[points_num][0] < masks_cter[bests_id[0]][0]:
-                    if box_points[points_num][1] < masks_cter[bests_id[0]][1]:
-                        angle_point[points_num] = math.atan((masks_cter[bests_id[0]][0] - box_points[points_num][0])/(masks_cter[bests_id[0]][1] - box_points[points_num][1]))
-                    elif box_points[points_num][1] > masks_cter[bests_id[0]][1]:
-                        angle_point[points_num] = np.pi/2 + math.atan((box_points[points_num][1] - masks_cter[bests_id[0]][1])/(masks_cter[bests_id[0]][0] - box_points[points_num][0]))                   
-                if box_points[points_num][0] > masks_cter[bests_id[0]][0]:
-                    if box_points[points_num][1] < masks_cter[bests_id[0]][1]:
-                        angle_point[points_num] = 3*np.pi/2 + math.atan((masks_cter[bests_id[0]][1] - box_points[points_num][1])/(box_points[points_num][0] - masks_cter[bests_id[0]][0]))
-                    elif box_points[points_num][1] > masks_cter[bests_id[0]][1]:
-                        angle_point[points_num] = np.pi + math.atan((box_points[points_num][0] - masks_cter[bests_id[0]][0])/(box_points[points_num][1] - masks_cter[bests_id[0]][1]))               
-            angle_max = 0
-            for i in range(3):
-                for j in range(i+1,4,1):
-                    angle_diff = min(abs(angle_point[i] - angle_point[j]), 2*np.pi - abs(angle_point[i] - angle_point[j]))
-                    if angle_diff > angle_max:
-                        angle_max = angle_diff
-                        object_val[object_id][0] = min(angle_point[i], angle_point[j])
-                        object_val[object_id][1] = max(angle_point[i], angle_point[j])                          
-                           
-    
-    for i in range(objects_number):
-        h_aver = max(0.,height_s_aver[i]-height_s_aver[bests_id[0]])
-        d_aver = max(0.001, distance_s_aver[i])
-        object_val[i][2] = math.exp(-h_aver/d_aver)
-    
-    for i in range(objects_number):
-        if i != bests_id[0] and object_val[i][2] != 1.:
-            angle_0, angle_1 = int(180*object_val[i][0]/np.pi), int(180*object_val[i][1]/np.pi)
-            if abs(object_val[i][0] - object_val[i][1]) <= np.pi:
-               for angle_id in range(angle_0,angle_1):
-                   angle_val[angle_id] = angle_val[angle_id] * object_val[i][2]
-            else:
-                for angle_id in range(angle_0):
-                    angle_val[angle_id] = angle_val[angle_id] * object_val[i][2]
-                for angle_id in range(angle_1,360):
-                    angle_val[angle_id] = angle_val[angle_id] * object_val[i][2]                                                 
-    start_id, end_id, value_id, value_box, angle_box = 0, 0, angle_val[0], [], []
-    for i in range(len(angle_val)):
-        if angle_val[i] != value_id:
-            end_id = i-1
-            value_box.append(value_id)
-            angle_box.append([start_id, end_id])
-            value_id, start_id = angle_val[i], i
-        if i == (len(angle_val)-1) and start_id != i:
-            value_box.append(value_id)
-            angle_box.append([start_id, i])                
-    value_threshold, angle_threshold = 0.95, 45                    
-    a_object_val, a_angle_val, a_value_box, a_angle_box = object_val.copy(), angle_val.copy(), value_box.copy(), angle_box.copy()
-    object_val_set = list(set(a_object_val[:,2]))
-    object_val_set.append(1.)
-    object_val_set = list(set(object_val_set))
-    pre_sorted = list(np.argsort(object_val_set))
-    pre_sorted.reverse()
-    s_angle_selected = []
-    for val_id in range(len(object_val_set)):
-        if min(a_value_box) >= value_threshold:
-            s_angle_selected.append(0.)                    
-        if len(s_angle_selected) == 0:
-            value_selected, s_angle_selected_box = 1., []                       
-            if a_angle_val[1] == a_angle_val[359] and a_value_box[0] >= value_selected:
-                angle_left = a_angle_box[0][1]
-                angle_right = a_angle_box[len(a_angle_box)-1][1] - a_angle_box[len(a_angle_box)-1][0]
-                if (angle_left + angle_right) >= angle_threshold:
-                    if angle_left > angle_right:
-                        #s_angle_selected.append(min(90, angle_left - int((angle_left + angle_right)/2)))
-                        s_angle_selected.append(angle_left - int((angle_left + angle_right)/2))
-                    else:
-                        #s_angle_selected.append(max(270, a_angle_box[len(a_angle_box)-1][0] + int((angle_left + angle_right)/2)))
-                        s_angle_selected.append(a_angle_box[len(a_angle_box)-1][0] + int((angle_left + angle_right)/2))
-            if len(s_angle_selected) == 0:
-                for i in range(len(a_value_box)):
-                    if a_value_box[i] >= value_selected and (a_angle_box[i][1] - a_angle_box[i][0]) >= angle_threshold:
-                        s_angle_selected_box.append([a_angle_box[i][0], a_angle_box[i][1], a_angle_box[i][1] - a_angle_box[i][0], int((a_angle_box[i][0] + a_angle_box[i][1])/2)])
-                if len(s_angle_selected_box) > 0:
-                    s_angle_selected_box = np.asarray(s_angle_selected_box)
-                    angle_sorted = list(np.argsort(s_angle_selected_box[:,2]))
-                    angle_sorted.reverse()
-                    
-                    s_angle_selected.append(s_angle_selected_box[angle_sorted[0]][3])
-                                                            
-                    # for ang_num in range(len(angle_sorted)):
-                    #     sorted_num = angle_sorted[ang_num]
-                    #     if s_angle_selected_box[sorted_num][3] < 135 or s_angle_selected_box[sorted_num][3] > 225:
-                    #         s_angle_selected.append(s_angle_selected_box[sorted_num][3])
-                    #     elif s_angle_selected_box[sorted_num][0] < 112.5 or s_angle_selected_box[sorted_num][1] > 247.5:
-                    #         if (180 - s_angle_selected_box[sorted_num][0]) > (s_angle_selected_box[sorted_num][1] - 180):
-                    #             s_angle_selected.append(max(90, s_angle_selected_box[sorted_num][0] + int(22.5)))
-                    #         else:
-                    #             s_angle_selected.append(min(270, s_angle_selected_box[sorted_num][1] - int(22.5)))
-                    #     if len(s_angle_selected) != 0:
-                    #         break
-                    # if len(s_angle_selected) == 0:
-                    #     slected_angle, selected_id = abs(s_angle_selected_box[0][3] - 180), 0
-                    #     for ang_num in range(len(s_angle_selected_box)):
-                    #         if abs(s_angle_selected_box[ang_num][3] - 180) > slected_angle:
-                    #             slected_angle, selected_id = abs(s_angle_selected_box[ang_num][3] - 180), ang_num
-                    #     s_angle_selected.append(s_angle_selected_box[selected_id][3])
-                
-                if len(s_angle_selected) == 0:
-                    for obj_num in range(objects_number):
-                        if abs(a_object_val[obj_num][2] - object_val_set[pre_sorted[val_id+1]]) < 0.001:
-                            a_object_val[obj_num][2] = 1.
-                    
-                    a_angle_val = np.ones((360,))
-                    for i in range(objects_number):
-                        if i != bests_id[0] and a_object_val[i][2] !=1.:
-                            angle_0, angle_1 = int(180*a_object_val[i][0]/np.pi), int(180*a_object_val[i][1]/np.pi)
-                            if abs(a_object_val[i][0] - a_object_val[i][1]) <= np.pi:
-                               for angle_id in range(angle_0,angle_1):
-                                   a_angle_val[angle_id] = a_angle_val[angle_id] * a_object_val[i][2]
-                            else:
-                                for angle_id in range(angle_0):
-                                    a_angle_val[angle_id] = a_angle_val[angle_id] * a_object_val[i][2]
-                                for angle_id in range(angle_1,360):
-                                    a_angle_val[angle_id] = a_angle_val[angle_id] * a_object_val[i][2]    
-                    a_start_id, a_end_id, a_value_id, a_value_box, a_angle_box = 0, 0, a_angle_val[0], [], []
-                    for i in range(len(a_angle_val)):
-                        if a_angle_val[i] != a_value_id:
-                            a_end_id = i-1
-                            a_value_box.append(a_value_id)
-                            a_angle_box.append([a_start_id, a_end_id])
-                            a_value_id, a_start_id = a_angle_val[i], i
-                        if i == (len(a_angle_val)-1) and a_start_id != i:
-                            a_value_box.append(a_value_id)
-                            a_angle_box.append([a_start_id, i])
+                        if box_points[points_num][1] < masks_cter[bests_id[0]][1]:
+                            angle_point[points_num] = math.atan((masks_cter[bests_id[0]][0] - box_points[points_num][0])/(masks_cter[bests_id[0]][1] - box_points[points_num][1]))
+                        elif box_points[points_num][1] > masks_cter[bests_id[0]][1]:
+                            angle_point[points_num] = np.pi/2 + math.atan((box_points[points_num][1] - masks_cter[bests_id[0]][1])/(masks_cter[bests_id[0]][0] - box_points[points_num][0]))                   
+                    if box_points[points_num][0] > masks_cter[bests_id[0]][0]:
+                        if box_points[points_num][1] < masks_cter[bests_id[0]][1]:
+                            angle_point[points_num] = 3*np.pi/2 + math.atan((masks_cter[bests_id[0]][1] - box_points[points_num][1])/(box_points[points_num][0] - masks_cter[bests_id[0]][0]))
+                        elif box_points[points_num][1] > masks_cter[bests_id[0]][1]:
+                            angle_point[points_num] = np.pi + math.atan((box_points[points_num][0] - masks_cter[bests_id[0]][0])/(box_points[points_num][1] - masks_cter[bests_id[0]][1]))               
+                angle_max = 0
+                for i in range(3):
+                    for j in range(i+1,4,1):
+                        angle_diff = min(abs(angle_point[i] - angle_point[j]), 2*np.pi - abs(angle_point[i] - angle_point[j]))
+                        if angle_diff > angle_max:
+                            angle_max = angle_diff
+                            object_val[object_id][0] = min(angle_point[i], angle_point[j])
+                            object_val[object_id][1] = max(angle_point[i], angle_point[j])                          
+                               
         
-        if len(s_angle_selected) != 0:
-            break                                 
-    plt.figure(dpi=500)
-    theta = np.linspace(0.0, 2*np.pi, 360, endpoint=False)
-    radii = angle_val*10
-    width = np.pi/180
-    ax = plt.subplot(111,projection='polar')
-    bars = ax.bar(theta,radii,width=width,bottom=10.)
-    ax.set_theta_offset(np.pi)
-    ax.set_thetagrids(np.arange(0.,360.,45.))
+        for i in range(objects_number):
+            h_aver = max(0.,height_s_aver[i]-height_s_aver[bests_id[0]])
+            d_aver = max(0.001, distance_s_aver[i])
+            object_val[i][2] = math.exp(-h_aver/d_aver)
+        
+        for i in range(objects_number):
+            if i != bests_id[0] and object_val[i][2] != 1.:
+                angle_0, angle_1 = int(180*object_val[i][0]/np.pi), int(180*object_val[i][1]/np.pi)
+                if abs(object_val[i][0] - object_val[i][1]) <= np.pi:
+                   for angle_id in range(angle_0,angle_1):
+                       angle_val[angle_id] = angle_val[angle_id] * object_val[i][2]
+                else:
+                    for angle_id in range(angle_0):
+                        angle_val[angle_id] = angle_val[angle_id] * object_val[i][2]
+                    for angle_id in range(angle_1,360):
+                        angle_val[angle_id] = angle_val[angle_id] * object_val[i][2]                                                 
+        start_id, end_id, value_id, value_box, angle_box = 0, 0, angle_val[0], [], []
+        for i in range(len(angle_val)):
+            if angle_val[i] != value_id:
+                end_id = i-1
+                value_box.append(value_id)
+                angle_box.append([start_id, end_id])
+                value_id, start_id = angle_val[i], i
+            if i == (len(angle_val)-1) and start_id != i:
+                value_box.append(value_id)
+                angle_box.append([start_id, i])                
+        value_threshold, angle_threshold = 0.95, 45                    
+        a_object_val, a_angle_val, a_value_box, a_angle_box = object_val.copy(), angle_val.copy(), value_box.copy(), angle_box.copy()
+        object_val_set = list(set(a_object_val[:,2]))
+        object_val_set.append(1.)
+        object_val_set = list(set(object_val_set))
+        pre_sorted = list(np.argsort(object_val_set))
+        pre_sorted.reverse()
+        s_angle_selected = []
+        for val_id in range(len(object_val_set)):
+            if min(a_value_box) >= value_threshold:
+                s_angle_selected.append(0.)                    
+            if len(s_angle_selected) == 0:
+                value_selected, s_angle_selected_box = 1., []                       
+                if a_angle_val[1] == a_angle_val[359] and a_value_box[0] >= value_selected:
+                    angle_left = a_angle_box[0][1]
+                    angle_right = a_angle_box[len(a_angle_box)-1][1] - a_angle_box[len(a_angle_box)-1][0]
+                    if (angle_left + angle_right) >= angle_threshold:
+                        if angle_left > angle_right:
+                            #s_angle_selected.append(min(90, angle_left - int((angle_left + angle_right)/2)))
+                            s_angle_selected.append(angle_left - int((angle_left + angle_right)/2))
+                        else:
+                            #s_angle_selected.append(max(270, a_angle_box[len(a_angle_box)-1][0] + int((angle_left + angle_right)/2)))
+                            s_angle_selected.append(a_angle_box[len(a_angle_box)-1][0] + int((angle_left + angle_right)/2))
+                if len(s_angle_selected) == 0:
+                    for i in range(len(a_value_box)):
+                        if a_value_box[i] >= value_selected and (a_angle_box[i][1] - a_angle_box[i][0]) >= angle_threshold:
+                            s_angle_selected_box.append([a_angle_box[i][0], a_angle_box[i][1], a_angle_box[i][1] - a_angle_box[i][0], int((a_angle_box[i][0] + a_angle_box[i][1])/2)])
+                    if len(s_angle_selected_box) > 0:
+                        s_angle_selected_box = np.asarray(s_angle_selected_box)
+                        angle_sorted = list(np.argsort(s_angle_selected_box[:,2]))
+                        angle_sorted.reverse()
+                        
+                        s_angle_selected.append(s_angle_selected_box[angle_sorted[0]][3])
+                                                                
+                        # for ang_num in range(len(angle_sorted)):
+                        #     sorted_num = angle_sorted[ang_num]
+                        #     if s_angle_selected_box[sorted_num][3] < 135 or s_angle_selected_box[sorted_num][3] > 225:
+                        #         s_angle_selected.append(s_angle_selected_box[sorted_num][3])
+                        #     elif s_angle_selected_box[sorted_num][0] < 112.5 or s_angle_selected_box[sorted_num][1] > 247.5:
+                        #         if (180 - s_angle_selected_box[sorted_num][0]) > (s_angle_selected_box[sorted_num][1] - 180):
+                        #             s_angle_selected.append(max(90, s_angle_selected_box[sorted_num][0] + int(22.5)))
+                        #         else:
+                        #             s_angle_selected.append(min(270, s_angle_selected_box[sorted_num][1] - int(22.5)))
+                        #     if len(s_angle_selected) != 0:
+                        #         break
+                        # if len(s_angle_selected) == 0:
+                        #     slected_angle, selected_id = abs(s_angle_selected_box[0][3] - 180), 0
+                        #     for ang_num in range(len(s_angle_selected_box)):
+                        #         if abs(s_angle_selected_box[ang_num][3] - 180) > slected_angle:
+                        #             slected_angle, selected_id = abs(s_angle_selected_box[ang_num][3] - 180), ang_num
+                        #     s_angle_selected.append(s_angle_selected_box[selected_id][3])
+                    
+                    if len(s_angle_selected) == 0:
+                        for obj_num in range(objects_number):
+                            if abs(a_object_val[obj_num][2] - object_val_set[pre_sorted[val_id+1]]) < 0.001:
+                                a_object_val[obj_num][2] = 1.
+                        
+                        a_angle_val = np.ones((360,))
+                        for i in range(objects_number):
+                            if i != bests_id[0] and a_object_val[i][2] !=1.:
+                                angle_0, angle_1 = int(180*a_object_val[i][0]/np.pi), int(180*a_object_val[i][1]/np.pi)
+                                if abs(a_object_val[i][0] - a_object_val[i][1]) <= np.pi:
+                                   for angle_id in range(angle_0,angle_1):
+                                       a_angle_val[angle_id] = a_angle_val[angle_id] * a_object_val[i][2]
+                                else:
+                                    for angle_id in range(angle_0):
+                                        a_angle_val[angle_id] = a_angle_val[angle_id] * a_object_val[i][2]
+                                    for angle_id in range(angle_1,360):
+                                        a_angle_val[angle_id] = a_angle_val[angle_id] * a_object_val[i][2]    
+                        a_start_id, a_end_id, a_value_id, a_value_box, a_angle_box = 0, 0, a_angle_val[0], [], []
+                        for i in range(len(a_angle_val)):
+                            if a_angle_val[i] != a_value_id:
+                                a_end_id = i-1
+                                a_value_box.append(a_value_id)
+                                a_angle_box.append([a_start_id, a_end_id])
+                                a_value_id, a_start_id = a_angle_val[i], i
+                            if i == (len(a_angle_val)-1) and a_start_id != i:
+                                a_value_box.append(a_value_id)
+                                a_angle_box.append([a_start_id, i])           
+            if len(s_angle_selected) != 0:
+                break                                         
+        suction_rotation_angle = s_angle_selected[0]
+        
+        
+        
+        
+        # plt.figure(dpi=500)
+        # theta = np.linspace(0.0, 2*np.pi, 360, endpoint=False)
+        # radii = angle_val*10
+        # width = np.pi/180
+        # ax = plt.subplot(111,projection='polar')
+        # bars = ax.bar(theta,radii,width=width,bottom=10.)
+        # ax.set_theta_offset(np.pi)
+        # ax.set_thetagrids(np.arange(0.,360.,45.))
+        
+        # print('s_angle_selected',s_angle_selected)
+        # selected_r = np.arange(0,20,0.1)
+        # selected_t = np.pi*np.ones((200,))*s_angle_selected[0]/180
+        # ax.plot(selected_t, selected_r, linewidth=3, color='red')
+        
+        # for r, bar in zip(radii,bars):
+        #     bar.set_facecolor(plt.cm.viridis(r/11))
+        #     bar.set_alpha(0.5)
+        
+        # plt.grid(ls='--')
+        # #plt.grid(axis='y')
+        # plt.yticks([])
+        # plt.tick_params(axis='x',colors='red')   
+        # plt.show() 
     
-    print('s_angle_selected',s_angle_selected)
-    selected_r = np.arange(0,20,0.1)
-    selected_t = np.pi*np.ones((200,))*s_angle_selected[0]/180
-    ax.plot(selected_t, selected_r, linewidth=3, color='red')
-    
-    for r, bar in zip(radii,bars):
-        bar.set_facecolor(plt.cm.viridis(r/11))
-        bar.set_alpha(0.5)
-    
-    plt.grid(ls='--')
-    #plt.grid(axis='y')
-    plt.yticks([])
-    plt.tick_params(axis='x',colors='red')   
-    plt.show() 
+       
+        # box_glob_s_cors, box_glob_s_norv = np.zeros((4,3)), np.zeros((4,3))
+        # euler_angles = np.zeros((4,3))
+        # for i in range(4):                    
+        #     box_pix_s = [0,box_mask_cors[bests_id[0]][i][1],box_mask_cors[bests_id[0]][i][0]]
+        #     box_pix_s = np.array(box_pix_s).astype(int)                    
+        #     box_glob_s_cors[i] = utils.global_position(box_pix_s, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
+        # box_glob_s_norv[0] = [(box_glob_s_cors[3][1]-box_glob_s_cors[0][1])*(box_glob_s_cors[1][2]-box_glob_s_cors[0][2]) - (box_glob_s_cors[1][1]-box_glob_s_cors[0][1])*(box_glob_s_cors[3][2]-box_glob_s_cors[0][2]),
+        #                       (box_glob_s_cors[3][2]-box_glob_s_cors[0][2])*(box_glob_s_cors[1][0]-box_glob_s_cors[0][0]) - (box_glob_s_cors[1][2]-box_glob_s_cors[0][2])*(box_glob_s_cors[3][0]-box_glob_s_cors[0][0]),
+        #                       (box_glob_s_cors[3][0]-box_glob_s_cors[0][0])*(box_glob_s_cors[1][1]-box_glob_s_cors[0][1]) - (box_glob_s_cors[1][0]-box_glob_s_cors[0][0])*(box_glob_s_cors[3][1]-box_glob_s_cors[0][1])]
+        # box_glob_s_norv[1] = [(box_glob_s_cors[0][1]-box_glob_s_cors[1][1])*(box_glob_s_cors[2][2]-box_glob_s_cors[1][2]) - (box_glob_s_cors[2][1]-box_glob_s_cors[1][1])*(box_glob_s_cors[0][2]-box_glob_s_cors[1][2]),
+        #                       (box_glob_s_cors[0][2]-box_glob_s_cors[1][2])*(box_glob_s_cors[2][0]-box_glob_s_cors[1][0]) - (box_glob_s_cors[2][2]-box_glob_s_cors[1][2])*(box_glob_s_cors[0][0]-box_glob_s_cors[1][0]),
+        #                       (box_glob_s_cors[0][0]-box_glob_s_cors[1][0])*(box_glob_s_cors[2][1]-box_glob_s_cors[1][1]) - (box_glob_s_cors[2][0]-box_glob_s_cors[1][0])*(box_glob_s_cors[0][1]-box_glob_s_cors[1][1])]
+        # box_glob_s_norv[2] = [(box_glob_s_cors[1][1]-box_glob_s_cors[2][1])*(box_glob_s_cors[3][2]-box_glob_s_cors[2][2]) - (box_glob_s_cors[3][1]-box_glob_s_cors[2][1])*(box_glob_s_cors[1][2]-box_glob_s_cors[2][2]),
+        #                       (box_glob_s_cors[1][2]-box_glob_s_cors[2][2])*(box_glob_s_cors[3][0]-box_glob_s_cors[2][0]) - (box_glob_s_cors[3][2]-box_glob_s_cors[2][2])*(box_glob_s_cors[1][0]-box_glob_s_cors[2][0]),
+        #                       (box_glob_s_cors[1][0]-box_glob_s_cors[2][0])*(box_glob_s_cors[3][1]-box_glob_s_cors[2][1]) - (box_glob_s_cors[3][0]-box_glob_s_cors[2][0])*(box_glob_s_cors[1][1]-box_glob_s_cors[2][1])]
+        # box_glob_s_norv[3] = [(box_glob_s_cors[2][1]-box_glob_s_cors[3][1])*(box_glob_s_cors[0][2]-box_glob_s_cors[3][2]) - (box_glob_s_cors[0][1]-box_glob_s_cors[3][1])*(box_glob_s_cors[2][2]-box_glob_s_cors[3][2]),
+        #                       (box_glob_s_cors[2][2]-box_glob_s_cors[3][2])*(box_glob_s_cors[0][0]-box_glob_s_cors[3][0]) - (box_glob_s_cors[0][2]-box_glob_s_cors[3][2])*(box_glob_s_cors[2][0]-box_glob_s_cors[3][0]),
+        #                       (box_glob_s_cors[2][0]-box_glob_s_cors[3][0])*(box_glob_s_cors[0][1]-box_glob_s_cors[3][1]) - (box_glob_s_cors[0][0]-box_glob_s_cors[3][0])*(box_glob_s_cors[2][1]-box_glob_s_cors[3][1])]
+        
+        # for i in range(4):
+        #     box_glob_s_norv[i] = box_glob_s_norv[i]/math.sqrt(box_glob_s_norv[i][0]**2 + box_glob_s_norv[i][1]**2 + box_glob_s_norv[i][2]**2)
+        # for i in range(4):
+        #     if box_glob_s_norv[i][0] == 1 or box_glob_s_norv[i][0] == -1:
+        #         box_glob_s_norv[i][0] = box_glob_s_norv[i][0]*0.999
+        #     if box_glob_s_norv[i][1] == 0 and box_glob_s_norv[i][2] < 0:
+        #         box_glob_s_norv[i][2] = box_glob_s_norv[i][2]*0.999
+        #     if box_glob_s_norv[i][1] >= 0:
+        #         euler_angles[i][0] = math.acos(box_glob_s_norv[i][2]/math.sqrt(1-box_glob_s_norv[i][0]**2))
+        #     else:
+        #         if box_glob_s_norv[i][2] >= 0:
+        #             euler_angles[i][0] = math.asin(box_glob_s_norv[i][1]/math.sqrt(1-box_glob_s_norv[i][0]**2))
+        #         else:
+        #             euler_angles[i][0] = -math.acos(box_glob_s_norv[i][2]/math.sqrt(1-box_glob_s_norv[i][0]**2))
+        #     euler_angles[i][1] = math.asin(box_glob_s_norv[i][0])                                        
+        # print('box_glob_s_cors', box_glob_s_cors)
+        # print('box_glob_s_norv', box_glob_s_norv)
+        # print('euler_angles', euler_angles)                                
+        # suction_rotation_angle = euler_angles[0]
 
-
-
-   
-    # box_glob_s_cors, box_glob_s_norv = np.zeros((4,3)), np.zeros((4,3))
-    # euler_angles = np.zeros((4,3))
-    # for i in range(4):                    
-    #     box_pix_s = [0,box_mask_cors[bests_id[0]][i][1],box_mask_cors[bests_id[0]][i][0]]
-    #     box_pix_s = np.array(box_pix_s).astype(int)                    
-    #     box_glob_s_cors[i] = utils.global_position(box_pix_s, A_htor, robot.cam_intrinsics, robot.cam_pose, depth_img)
-    # box_glob_s_norv[0] = [(box_glob_s_cors[3][1]-box_glob_s_cors[0][1])*(box_glob_s_cors[1][2]-box_glob_s_cors[0][2]) - (box_glob_s_cors[1][1]-box_glob_s_cors[0][1])*(box_glob_s_cors[3][2]-box_glob_s_cors[0][2]),
-    #                       (box_glob_s_cors[3][2]-box_glob_s_cors[0][2])*(box_glob_s_cors[1][0]-box_glob_s_cors[0][0]) - (box_glob_s_cors[1][2]-box_glob_s_cors[0][2])*(box_glob_s_cors[3][0]-box_glob_s_cors[0][0]),
-    #                       (box_glob_s_cors[3][0]-box_glob_s_cors[0][0])*(box_glob_s_cors[1][1]-box_glob_s_cors[0][1]) - (box_glob_s_cors[1][0]-box_glob_s_cors[0][0])*(box_glob_s_cors[3][1]-box_glob_s_cors[0][1])]
-    # box_glob_s_norv[1] = [(box_glob_s_cors[0][1]-box_glob_s_cors[1][1])*(box_glob_s_cors[2][2]-box_glob_s_cors[1][2]) - (box_glob_s_cors[2][1]-box_glob_s_cors[1][1])*(box_glob_s_cors[0][2]-box_glob_s_cors[1][2]),
-    #                       (box_glob_s_cors[0][2]-box_glob_s_cors[1][2])*(box_glob_s_cors[2][0]-box_glob_s_cors[1][0]) - (box_glob_s_cors[2][2]-box_glob_s_cors[1][2])*(box_glob_s_cors[0][0]-box_glob_s_cors[1][0]),
-    #                       (box_glob_s_cors[0][0]-box_glob_s_cors[1][0])*(box_glob_s_cors[2][1]-box_glob_s_cors[1][1]) - (box_glob_s_cors[2][0]-box_glob_s_cors[1][0])*(box_glob_s_cors[0][1]-box_glob_s_cors[1][1])]
-    # box_glob_s_norv[2] = [(box_glob_s_cors[1][1]-box_glob_s_cors[2][1])*(box_glob_s_cors[3][2]-box_glob_s_cors[2][2]) - (box_glob_s_cors[3][1]-box_glob_s_cors[2][1])*(box_glob_s_cors[1][2]-box_glob_s_cors[2][2]),
-    #                       (box_glob_s_cors[1][2]-box_glob_s_cors[2][2])*(box_glob_s_cors[3][0]-box_glob_s_cors[2][0]) - (box_glob_s_cors[3][2]-box_glob_s_cors[2][2])*(box_glob_s_cors[1][0]-box_glob_s_cors[2][0]),
-    #                       (box_glob_s_cors[1][0]-box_glob_s_cors[2][0])*(box_glob_s_cors[3][1]-box_glob_s_cors[2][1]) - (box_glob_s_cors[3][0]-box_glob_s_cors[2][0])*(box_glob_s_cors[1][1]-box_glob_s_cors[2][1])]
-    # box_glob_s_norv[3] = [(box_glob_s_cors[2][1]-box_glob_s_cors[3][1])*(box_glob_s_cors[0][2]-box_glob_s_cors[3][2]) - (box_glob_s_cors[0][1]-box_glob_s_cors[3][1])*(box_glob_s_cors[2][2]-box_glob_s_cors[3][2]),
-    #                       (box_glob_s_cors[2][2]-box_glob_s_cors[3][2])*(box_glob_s_cors[0][0]-box_glob_s_cors[3][0]) - (box_glob_s_cors[0][2]-box_glob_s_cors[3][2])*(box_glob_s_cors[2][0]-box_glob_s_cors[3][0]),
-    #                       (box_glob_s_cors[2][0]-box_glob_s_cors[3][0])*(box_glob_s_cors[0][1]-box_glob_s_cors[3][1]) - (box_glob_s_cors[0][0]-box_glob_s_cors[3][0])*(box_glob_s_cors[2][1]-box_glob_s_cors[3][1])]
-    
-    # for i in range(4):
-    #     box_glob_s_norv[i] = box_glob_s_norv[i]/math.sqrt(box_glob_s_norv[i][0]**2 + box_glob_s_norv[i][1]**2 + box_glob_s_norv[i][2]**2)
-    # for i in range(4):
-    #     if box_glob_s_norv[i][0] == 1 or box_glob_s_norv[i][0] == -1:
-    #         box_glob_s_norv[i][0] = box_glob_s_norv[i][0]*0.999
-    #     if box_glob_s_norv[i][1] == 0 and box_glob_s_norv[i][2] < 0:
-    #         box_glob_s_norv[i][2] = box_glob_s_norv[i][2]*0.999
-    #     if box_glob_s_norv[i][1] >= 0:
-    #         euler_angles[i][0] = math.acos(box_glob_s_norv[i][2]/math.sqrt(1-box_glob_s_norv[i][0]**2))
-    #     else:
-    #         if box_glob_s_norv[i][2] >= 0:
-    #             euler_angles[i][0] = math.asin(box_glob_s_norv[i][1]/math.sqrt(1-box_glob_s_norv[i][0]**2))
-    #         else:
-    #             euler_angles[i][0] = -math.acos(box_glob_s_norv[i][2]/math.sqrt(1-box_glob_s_norv[i][0]**2))
-    #     euler_angles[i][1] = math.asin(box_glob_s_norv[i][0])                                        
-    # print('box_glob_s_cors', box_glob_s_cors)
-    # print('box_glob_s_norv', box_glob_s_norv)
-    # print('euler_angles', euler_angles)                                
-    # suction_rotation_angle = euler_angles[0]
-
-    return suction_center_cor, np.deg2rad(s_angle_selected[0])
+    return suction_center_cor, np.deg2rad(suction_rotation_angle)
 
 
 
