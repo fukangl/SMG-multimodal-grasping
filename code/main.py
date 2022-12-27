@@ -430,7 +430,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_obj', dest='num_obj', type=int, action='store', default=10,                                  help='number of objects to add to simulation')
     parser.add_argument('--heightmap_resolution', dest='heightmap_resolution', type=float, action='store', default=0.002,   help='meters per pixel of heightmap')
     parser.add_argument('--cpu', dest='force_cpu', action='store_true', default=False,                                      help='force code to run in CPU mode')
-    parser.add_argument('--is_cluttered', dest='is_cluttered', action='store', default='lightly-cluttered',                 help='set to \'lightly-cluttered\'  or \'highly-cluttered\'')
+    parser.add_argument('--is_cluttered', dest='is_cluttered', action='store_true', default=False,                          help='set to \'lightly-cluttered\'  or \'highly-cluttered\'')
     
     # ------------- Algorithm options -------------
     parser.add_argument('--method', dest='method', action='store', default='reinforcement',                                 help='set to \'reactive\' (supervised learning) or \'reinforcement\'(DDQN)')
