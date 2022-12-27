@@ -9,7 +9,7 @@
 <sup>3</sup> University of California, Los Angeles </br> 
 
 #### Contact
-If you have any questions, please let me know: [Fukang Liu](https://fukangl.github.io/) fukangl@andrew.cmu.edu
+If you have any questions, please let me know: [Fukang Liu](https://fukangl.github.io/) fukangl[at]andrew[dot]cmu[dot]edu
 
 ## Installation
 
