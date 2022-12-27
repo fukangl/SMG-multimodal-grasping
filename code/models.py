@@ -19,16 +19,11 @@ class reactive_net(nn.Module):
         self.use_cuda = use_cuda
 
         # Initialize network trunks with DenseNet pre-trained on ImageNet
-        # self.suction_color_trunk = torchvision.models.densenet.densenet121(pretrained=True)
         self.suction_depth_trunk = torchvision.models.densenet.densenet121(pretrained=True)
-        # self.grasp_color_trunk = torchvision.models.densenet.densenet121(pretrained=True)
         self.grasp_depth_trunk = torchvision.models.densenet.densenet121(pretrained=True)
-        # self.gs_color_trunk = torchvision.models.densenet.densenet121(pretrained=True)
         self.gs_depth_trunk = torchvision.models.densenet.densenet121(pretrained=True)
-
         self.gnum_rotations = 1
         self.snum_rotations = 1
-
         # reactive network architecture for suction
         self.suctionnet_val = nn.Sequential(OrderedDict([
             ('suction-val-norm0', nn.BatchNorm2d(2048)),
@@ -38,8 +33,7 @@ class reactive_net(nn.Module):
             ('suction-val-relu1', nn.ReLU(inplace=True)),
             ('suction-val-conv1', nn.Conv2d(64, 3, kernel_size=20, stride=1, bias=False))
         ]))
-        
-        
+                
         # reactive network architecture for grasping
         self.graspnet_val = nn.Sequential(OrderedDict([
             ('grasp-val-norm0', nn.BatchNorm2d(2048)),
@@ -49,8 +43,7 @@ class reactive_net(nn.Module):
             ('grasp-val-relu1', nn.ReLU(inplace=True)),
             ('grasp-val-conv1', nn.Conv2d(64, 3, kernel_size=20, stride=1, bias=False))
         ]))
-        
-        
+                
         # reactive network architecture for grasping_then_suction
         self.gsnet_val = nn.Sequential(OrderedDict([
             ('grasp-val-norm0', nn.BatchNorm2d(2048)),
@@ -60,8 +53,7 @@ class reactive_net(nn.Module):
             ('grasp-val-relu1', nn.ReLU(inplace=True)),
             ('grasp-val-conv1', nn.Conv2d(64, 3, kernel_size=20, stride=1, bias=False))
         ]))
-        
-            
+                    
         # Initialize network weights
         for m in self.named_modules():
             if 'suction-' in m[0] or 'grasp-' in m[0] or 'gs-' in m[0]:
@@ -98,19 +90,14 @@ class reactive_net(nn.Module):
                         # Rotate images clockwise
                         if self.use_cuda:
                             with torch.no_grad():
-                                # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                                 rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                       
                         # Compute intermediate features     
-                        # interm_grasp_color_feat = self.grasp_color_trunk.features(rotate_color)
                         interm_grasp_depth_feat = self.grasp_depth_trunk.features(rotate_depth)                        
-                        # m_interm_grasp_color_feat = self.grasp_color_trunk.features(m_input_color_data.cuda())
                         m_interm_grasp_depth_feat = self.grasp_depth_trunk.features(m_input_depth_data.cuda())
-                        interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)    
-                        
+                        interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                           
                         grasp_Q = self.graspnet_val(interm_grasp_feat)                                    
                         gra_prob.append(grasp_Q)
-                        
-                    
+                                            
                     return gra_prob
 
                 elif style == 1:
@@ -126,19 +113,14 @@ class reactive_net(nn.Module):
                         # Rotate images clockwise
                         if self.use_cuda:
                             with torch.no_grad():
-                                # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                                 rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                       
                         # Compute intermediate features
-                        # interm_suction_color_feat = self.suction_color_trunk.features(rotate_color)
                         interm_suction_depth_feat = self.suction_depth_trunk.features(rotate_depth)                        
-                        # m_interm_suction_color_feat = self.suction_color_trunk.features(m_input_color_data.cuda())
                         m_interm_suction_depth_feat = self.suction_depth_trunk.features(m_input_depth_data.cuda())                        
-                        interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)    
-                      
+                        interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)                          
                         suction_Q = self.suctionnet_val(interm_suction_feat)
                         suc_prob.append(suction_Q)
-                 
-                    
+                                     
                     return suc_prob                 
                 
                 elif style == 2:
@@ -154,15 +136,11 @@ class reactive_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                             rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                   
                     # Compute intermediate features
-                    # interm_gs_color_feat = self.gs_color_trunk.features(rotate_color)
                     interm_gs_depth_feat = self.gs_depth_trunk.features(rotate_depth)
-                    # m_interm_gs_color_feat = self.gs_color_trunk.features(m_input_color_data.cuda())
                     m_interm_gs_depth_feat = self.gs_depth_trunk.features(m_input_depth_data.cuda())                  
-                    interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)                     
-                    
+                    interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)                                         
                     gs_Q = self.suctionnet_val(interm_gs_feat)
                     gs_prob.append(gs_Q)                    
 
@@ -186,15 +164,12 @@ class reactive_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                             rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                    
                     # Compute intermediate features                    
-                    # interm_grasp_color_feat = self.grasp_color_trunk.features(rotate_color)
                     interm_grasp_depth_feat = self.grasp_depth_trunk.features(rotate_depth)
                     # m_interm_grasp_color_feat = self.grasp_color_trunk.features(m_input_color_data.cuda())
                     m_interm_grasp_depth_feat = self.grasp_depth_trunk.features(m_input_depth_data.cuda())                    
-                    interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)
-                    
+                    interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                    
                     grasp_Q = self.graspnet_val(interm_grasp_feat)                        
                     gra_prob = grasp_Q    
                 
@@ -212,15 +187,11 @@ class reactive_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
-                            rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                       
+                           rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                       
                     # Compute intermediate features
-                    # interm_suction_color_feat = self.suction_color_trunk.features(rotate_color)
                     interm_suction_depth_feat = self.suction_depth_trunk.features(rotate_depth)
-                    # m_interm_suction_color_feat = self.suction_color_trunk.features(m_input_color_data.cuda())
                     m_interm_suction_depth_feat = self.suction_depth_trunk.features(m_input_depth_data.cuda())                                        
-                    interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)
-                  
+                    interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)                 
                     suction_Q = self.suctionnet_val(interm_suction_feat)                       
                     suc_prob = suction_Q
                 
@@ -239,15 +210,11 @@ class reactive_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                             rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                    
                     # Compute intermediate features
-                    # interm_gs_color_feat = self.gs_color_trunk.features(rotate_color)
                     interm_gs_depth_feat = self.gs_depth_trunk.features(rotate_depth)
-                    # m_interm_gs_color_feat = self.gs_color_trunk.features(m_input_color_data.cuda())
                     m_interm_gs_depth_feat = self.gs_depth_trunk.features(m_input_depth_data.cuda())                   
-                    interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)    
-                   
+                    interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)                       
                     gs_Q = self.suctionnet_val(interm_gs_feat)
                     gs_prob = gs_Q
    
@@ -272,15 +239,11 @@ class reactive_net(nn.Module):
                     flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_depth_data.size(), align_corners=True)                
                 # Rotate images clockwise
                 if self.use_cuda:
-                    # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                     rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                
                 # Compute intermediate features                
-                # interm_grasp_color_feat = self.grasp_color_trunk.features(rotate_color)
                 interm_grasp_depth_feat = self.grasp_depth_trunk.features(rotate_depth)
-                # m_interm_grasp_color_feat = self.grasp_color_trunk.features(m_input_color_data.cuda())
                 m_interm_grasp_depth_feat = self.grasp_depth_trunk.features(m_input_depth_data.cuda())                
-                interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                
-               
+                interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                               
                 grasp_Q = self.graspnet_val(interm_grasp_feat)                        
                 self.gra_prob = grasp_Q    
                
@@ -299,15 +262,11 @@ class reactive_net(nn.Module):
                     flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_depth_data.size(), align_corners=True)              
                 # Rotate images clockwise
                 if self.use_cuda:
-                    # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                     rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                
                 # Compute intermediate features
-                # interm_suction_color_feat = self.suction_color_trunk.features(rotate_color)
                 interm_suction_depth_feat = self.suction_depth_trunk.features(rotate_depth)
-                # m_interm_suction_color_feat = self.suction_color_trunk.features(m_input_color_data.cuda())
                 m_interm_suction_depth_feat = self.suction_depth_trunk.features(m_input_depth_data.cuda())                                
-                interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)
-              
+                interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)             
                 suction_Q = self.suctionnet_val(interm_suction_feat)
                 self.suc_prob = suction_Q    
                 
@@ -326,22 +285,16 @@ class reactive_net(nn.Module):
                     flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_depth_data.size(), align_corners=True)                
                 # Rotate images clockwise
                 if self.use_cuda:
-                    #rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                     rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)               
                 # Compute intermediate features            
-                # interm_gs_color_feat = self.gs_color_trunk.features(rotate_color)
                 interm_gs_depth_feat = self.gs_depth_trunk.features(rotate_depth)
-                # m_interm_gs_color_feat = self.gs_color_trunk.features(m_input_color_data.cuda())
                 m_interm_gs_depth_feat = self.gs_depth_trunk.features(m_input_depth_data.cuda())               
-                interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)
-                               
+                interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)                               
                 gs_Q = self.suctionnet_val(interm_gs_feat)
                 self.gs_prob = gs_Q          
-                
-                
+                                
                 return self.gs_prob
                 
-
 
 
 
@@ -352,11 +305,8 @@ class reinforcement_net(nn.Module):
         self.use_cuda = use_cuda
 
         # Initialize network trunks with DenseNet pre-trained on ImageNet
-        # self.suction_color_trunk = torchvision.models.densenet.densenet121(pretrained=True)
         self.suction_depth_trunk = torchvision.models.densenet.densenet121(pretrained=True)
-        # self.grasp_color_trunk = torchvision.models.densenet.densenet121(pretrained=True)
         self.grasp_depth_trunk = torchvision.models.densenet.densenet121(pretrained=True)
-        # self.gs_color_trunk = torchvision.models.densenet.densenet121(pretrained=True)
         self.gs_depth_trunk = torchvision.models.densenet.densenet121(pretrained=True)
 
         self.gnum_rotations = 1
@@ -370,17 +320,7 @@ class reinforcement_net(nn.Module):
             ('suction-val-norm1', nn.BatchNorm2d(64)),
             ('suction-val-relu1', nn.ReLU(inplace=True)),
             ('suction-val-conv1', nn.Conv2d(64, 1, kernel_size=20, stride=1, bias=False))
-        ]))
-        
-        # self.suctionnet_adv = nn.Sequential(OrderedDict([
-        #     ('suction-adv-norm0', nn.BatchNorm2d(2048)),
-        #     ('suction-adv-relu0', nn.ReLU(inplace=True)),
-        #     ('suction-adv-conv0', nn.Conv2d(2048, 64, kernel_size=1, stride=1, bias=False)),
-        #     ('suction-adv-norm1', nn.BatchNorm2d(64)),
-        #     ('suction-adv-relu1', nn.ReLU(inplace=True)),
-        #     ('suction-adv-conv1', nn.Conv2d(64, 1, kernel_size=1, stride=1, bias=False))
-        # ]))                
-        
+        ]))                              
         
         # dueling network architecture for grasping
         self.graspnet_val = nn.Sequential(OrderedDict([
@@ -391,17 +331,7 @@ class reinforcement_net(nn.Module):
             ('grasp-val-relu1', nn.ReLU(inplace=True)),
             ('grasp-val-conv1', nn.Conv2d(64, 1, kernel_size=20, stride=1, bias=False))
         ]))
-        
-        # self.graspnet_adv = nn.Sequential(OrderedDict([
-        #     ('grasp-adv-norm0', nn.BatchNorm2d(2048)),
-        #     ('grasp-adv-relu0', nn.ReLU(inplace=True)),
-        #     ('grasp-adv-conv0', nn.Conv2d(2048, 64, kernel_size=1, stride=1, bias=False)),
-        #     ('grasp-adv-norm1', nn.BatchNorm2d(64)),
-        #     ('grasp-adv-relu1', nn.ReLU(inplace=True)),
-        #     ('grasp-adv-conv1', nn.Conv2d(64, 1, kernel_size=1, stride=1, bias=False))
-        # ]))
-        
-        
+                               
         # network architecture for grasping_then_suction
         self.gsnet_val = nn.Sequential(OrderedDict([
             ('grasp-val-norm0', nn.BatchNorm2d(2048)),
@@ -411,17 +341,7 @@ class reinforcement_net(nn.Module):
             ('grasp-val-relu1', nn.ReLU(inplace=True)),
             ('grasp-val-conv1', nn.Conv2d(64, 1, kernel_size=20, stride=1, bias=False))
         ]))
-        
-       
-        # # network for grasping-suction mode
-        # self.classifier = nn.Sequential(OrderedDict([
-        #     ('grasp-adv-norm0', nn.BatchNorm2d(2048)),
-        #     ('grasp-adv-relu0', nn.ReLU(inplace=True)),
-        #     ('grasp-adv-conv0', nn.Conv2d(2048, 64, kernel_size=1, stride=1, bias=False)),
-        #     ('grasp-adv-norm1', nn.BatchNorm2d(64)),
-        #     ('grasp-adv-relu1', nn.ReLU(inplace=True)),
-        #     ('classifier-linear', nn.Linear(64, 1))
-        # ]))
+                       
             
         # Initialize network weights
         for m in self.named_modules():
@@ -459,19 +379,14 @@ class reinforcement_net(nn.Module):
                         # Rotate images clockwise
                         if self.use_cuda:
                             with torch.no_grad():
-                                # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                                 rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                       
-                        # Compute intermediate features     
-                        # interm_grasp_color_feat = self.grasp_color_trunk.features(rotate_color)
-                        interm_grasp_depth_feat = self.grasp_depth_trunk.features(rotate_depth)                        
-                        # m_interm_grasp_color_feat = self.grasp_color_trunk.features(m_input_color_data.cuda())
+                        # Compute intermediate features
+                        interm_grasp_depth_feat = self.grasp_depth_trunk.features(rotate_depth)
                         m_interm_grasp_depth_feat = self.grasp_depth_trunk.features(m_input_depth_data.cuda())
-                        interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)    
-                        
+                        interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                            
                         grasp_Q = self.graspnet_val(interm_grasp_feat)                                    
                         gra_prob.append(grasp_Q)
-                        
-                    
+                                            
                     return gra_prob
 
                 elif style == 1:
@@ -487,15 +402,11 @@ class reinforcement_net(nn.Module):
                         # Rotate images clockwise
                         if self.use_cuda:
                             with torch.no_grad():
-                                # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                                 rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                       
                         # Compute intermediate features
-                        # interm_suction_color_feat = self.suction_color_trunk.features(rotate_color)
-                        interm_suction_depth_feat = self.suction_depth_trunk.features(rotate_depth)                        
-                        # m_interm_suction_color_feat = self.suction_color_trunk.features(m_input_color_data.cuda())
+                        interm_suction_depth_feat = self.suction_depth_trunk.features(rotate_depth)
                         m_interm_suction_depth_feat = self.suction_depth_trunk.features(m_input_depth_data.cuda())                        
-                        interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)    
-                      
+                        interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)                          
                         suction_Q = self.suctionnet_val(interm_suction_feat)
                         suc_prob.append(suction_Q)
                  
@@ -515,15 +426,11 @@ class reinforcement_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                             rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                   
                     # Compute intermediate features
-                    # interm_gs_color_feat = self.gs_color_trunk.features(rotate_color)
                     interm_gs_depth_feat = self.gs_depth_trunk.features(rotate_depth)
-                    # m_interm_gs_color_feat = self.gs_color_trunk.features(m_input_color_data.cuda())
                     m_interm_gs_depth_feat = self.gs_depth_trunk.features(m_input_depth_data.cuda())                  
                     interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)                     
-                    
                     gs_Q = self.suctionnet_val(interm_gs_feat)
                     gs_prob.append(gs_Q)                    
 
@@ -547,15 +454,11 @@ class reinforcement_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                             rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                    
-                    # Compute intermediate features                    
-                    # interm_grasp_color_feat = self.grasp_color_trunk.features(rotate_color)
+                    # Compute intermediate features
                     interm_grasp_depth_feat = self.grasp_depth_trunk.features(rotate_depth)
-                    # m_interm_grasp_color_feat = self.grasp_color_trunk.features(m_input_color_data.cuda())
                     m_interm_grasp_depth_feat = self.grasp_depth_trunk.features(m_input_depth_data.cuda())                    
-                    interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)
-                    
+                    interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                    
                     grasp_Q = self.graspnet_val(interm_grasp_feat)                        
                     gra_prob = grasp_Q    
                 
@@ -573,15 +476,11 @@ class reinforcement_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                             rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                       
                     # Compute intermediate features
-                    # interm_suction_color_feat = self.suction_color_trunk.features(rotate_color)
                     interm_suction_depth_feat = self.suction_depth_trunk.features(rotate_depth)
-                    # m_interm_suction_color_feat = self.suction_color_trunk.features(m_input_color_data.cuda())
                     m_interm_suction_depth_feat = self.suction_depth_trunk.features(m_input_depth_data.cuda())                                        
-                    interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)
-                  
+                    interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)                  
                     suction_Q = self.suctionnet_val(interm_suction_feat)                       
                     suc_prob = suction_Q
                 
@@ -600,15 +499,11 @@ class reinforcement_net(nn.Module):
                     # Rotate images clockwise
                     if self.use_cuda:
                         with torch.no_grad():
-                            # rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                             rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)                    
                     # Compute intermediate features
-                    # interm_gs_color_feat = self.gs_color_trunk.features(rotate_color)
                     interm_gs_depth_feat = self.gs_depth_trunk.features(rotate_depth)
-                    # m_interm_gs_color_feat = self.gs_color_trunk.features(m_input_color_data.cuda())
                     m_interm_gs_depth_feat = self.gs_depth_trunk.features(m_input_depth_data.cuda())                   
-                    interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)    
-                   
+                    interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)                       
                     gs_Q = self.suctionnet_val(interm_gs_feat)
                     gs_prob = gs_Q
    
@@ -633,15 +528,11 @@ class reinforcement_net(nn.Module):
                     flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_depth_data.size(), align_corners=True)                
                 # Rotate images clockwise
                 if self.use_cuda:
-                    # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                     rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                
-                # Compute intermediate features                
-                # interm_grasp_color_feat = self.grasp_color_trunk.features(rotate_color)
+                # Compute intermediate features
                 interm_grasp_depth_feat = self.grasp_depth_trunk.features(rotate_depth)
-                # m_interm_grasp_color_feat = self.grasp_color_trunk.features(m_input_color_data.cuda())
                 m_interm_grasp_depth_feat = self.grasp_depth_trunk.features(m_input_depth_data.cuda())                
-                interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                
-               
+                interm_grasp_feat = torch.cat((interm_grasp_depth_feat, m_interm_grasp_depth_feat), dim=1)                               
                 grasp_Q = self.graspnet_val(interm_grasp_feat)                        
                 self.gra_prob = grasp_Q    
                
@@ -660,15 +551,11 @@ class reinforcement_net(nn.Module):
                     flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_depth_data.size(), align_corners=True)              
                 # Rotate images clockwise
                 if self.use_cuda:
-                    # rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                     rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)                
                 # Compute intermediate features
-                # interm_suction_color_feat = self.suction_color_trunk.features(rotate_color)
                 interm_suction_depth_feat = self.suction_depth_trunk.features(rotate_depth)
-                # m_interm_suction_color_feat = self.suction_color_trunk.features(m_input_color_data.cuda())
                 m_interm_suction_depth_feat = self.suction_depth_trunk.features(m_input_depth_data.cuda())                                
-                interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)
-              
+                interm_suction_feat = torch.cat((interm_suction_depth_feat, m_interm_suction_depth_feat), dim=1)              
                 suction_Q = self.suctionnet_val(interm_suction_feat)
                 self.suc_prob = suction_Q    
                 
@@ -687,19 +574,14 @@ class reinforcement_net(nn.Module):
                     flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_depth_data.size(), align_corners=True)                
                 # Rotate images clockwise
                 if self.use_cuda:
-                    #rotate_color = F.grid_sample(Variable(input_color_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                     rotate_depth = F.grid_sample(Variable(input_depth_data, requires_grad=False).cuda(), flow_grid_before, mode='nearest', align_corners=True)               
-                # Compute intermediate features            
-                # interm_gs_color_feat = self.gs_color_trunk.features(rotate_color)
+                # Compute intermediate features
                 interm_gs_depth_feat = self.gs_depth_trunk.features(rotate_depth)
-                # m_interm_gs_color_feat = self.gs_color_trunk.features(m_input_color_data.cuda())
                 m_interm_gs_depth_feat = self.gs_depth_trunk.features(m_input_depth_data.cuda())               
-                interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)
-                               
+                interm_gs_feat = torch.cat((interm_gs_depth_feat, m_interm_gs_depth_feat), dim=1)                               
                 gs_Q = self.suctionnet_val(interm_gs_feat)
                 self.gs_prob = gs_Q          
                 
                 
                 return self.gs_prob
                 
-

@@ -14,18 +14,14 @@ def get_pointcloud(color_img, depth_img, camera_intrinsics):
     # Get depth image size
     im_h = depth_img.shape[0]
     im_w = depth_img.shape[1]
-
     # Project depth into 3D point cloud in camera coordinates
     pix_x,pix_y = np.meshgrid(np.linspace(0,im_w-1,im_w), np.linspace(0,im_h-1,im_h))
     cam_pts_x = np.multiply(pix_x-camera_intrinsics[0][2],depth_img/camera_intrinsics[0][0])    
     cam_pts_y = np.multiply(pix_y-camera_intrinsics[1][2],depth_img/camera_intrinsics[1][1])    
-    cam_pts_z = depth_img.copy()
-   
+    cam_pts_z = depth_img.copy()   
     cam_pts_x.shape = (im_h*im_w,1)
     cam_pts_y.shape = (im_h*im_w,1)
     cam_pts_z.shape = (im_h*im_w,1)
-
-
     # Reshape image into colors for 3D point cloud
     rgb_pts_r = color_img[:,:,0]
     rgb_pts_g = color_img[:,:,1]
@@ -33,12 +29,8 @@ def get_pointcloud(color_img, depth_img, camera_intrinsics):
     rgb_pts_r.shape = (im_h*im_w,1)
     rgb_pts_g.shape = (im_h*im_w,1)
     rgb_pts_b.shape = (im_h*im_w,1)
-
     cam_pts = np.concatenate((cam_pts_x, cam_pts_y, cam_pts_z), axis=1)
     rgb_pts = np.concatenate((rgb_pts_r, rgb_pts_g, rgb_pts_b), axis=1)
-
-
-    #rgb_pts1 = color_img[208:432,128:352,:]
 
     return cam_pts, rgb_pts
 
@@ -46,77 +38,45 @@ def get_pointcloud(color_img, depth_img, camera_intrinsics):
 def get_heightmap(color_img, depth_img, cam_intrinsics, cam_pose, workspace_limits, heightmap_resolution):
 
     # Compute heightmap size
-    #heightmap_size = np.round(((workspace_limits[1][1] - workspace_limits[1][0])/heightmap_resolution, (workspace_limits[0][1] - workspace_limits[0][0])/heightmap_resolution)).astype(int)   
     heightmap_size = (224,224)
     colormask_size = (448,448)
     color_h, color_w = color_img.shape[:2]
     # Get 3D point cloud from RGB-D images
     surface_pts, color_pts = get_pointcloud(color_img, depth_img, cam_intrinsics)
-
     # Transform 3D point cloud from camera coordinates to robot coordinates
-    surface_pts = np.transpose(np.dot(cam_pose[0:3,0:3],np.transpose(surface_pts)) + np.tile(cam_pose[0:3,3:],(1,surface_pts.shape[0])))
-
-    # valid_ind = np.argwhere(np.logical_and(np.logical_and(np.logical_and(np.logical_and(surface_pts[:,0] >= workspace_limits[0][0], surface_pts[:,0] < workspace_limits[0][1]), surface_pts[:,1] >= workspace_limits[1][0]), surface_pts[:,1] < workspace_limits[1][1]), surface_pts[:,2] < workspace_limits[2][1]))
-    # x1 = min(valid_ind[:,0]) % color_w
-    # x3 = max(valid_ind[:,0]) % color_w
-    # y1 = min(valid_ind[:,0]) // color_w
-    # y3 = max(valid_ind[:,0]) // color_w
-    # x2 = color_w-x3
-    # y2 = y3
-    # x4 = color_w-x1
-    # y4 = y1 
-    # print(x1,x2,x3,x4)
-    # print(y1,y2,y3,y4)       
-    # # x1,x2,x3,x4 = (142,21,619,498)
-    # # y1,y2,y3,y4 = (114,451,451,114)
-    
-    #sim
+    surface_pts = np.transpose(np.dot(cam_pose[0:3,0:3],np.transpose(surface_pts)) + np.tile(cam_pose[0:3,3:],(1,surface_pts.shape[0])))    
+    # sim
     x1,x2,x3,x4 = (110,110,510,510)
-    y1,y2,y3,y4 = (0,400,400,0)
-    
-    # # real-experiment
+    y1,y2,y3,y4 = (0,400,400,0)    
+    # real-experiment
     # x1,x2,x3,x4 = (105,105,455,455)
     # y1,y2,y3,y4 = (80,430,430,80)
-    
-    
+        
     src = np.array([[x1,y1],  [x2,y2],  [x3,y3], [x4,y4]], np.float32)
     dst_heightmap = np.array([[0,0],[0,heightmap_size[0]],[heightmap_size[1],heightmap_size[0]], [heightmap_size[1],0]], np.float32)
     dst_mask = np.array([[0,0],[0,colormask_size[0]],[colormask_size[1],colormask_size[0]],[colormask_size[1],0]], np.float32)
     A_heightmap = cv2.getPerspectiveTransform(src, dst_heightmap)
     A_mask = cv2.getPerspectiveTransform(src, dst_mask)
     worldcor_depthimg = surface_pts[:,2]
-    #print(len(worldcor_depthimg))
     worldcor_depthimg.shape = (480,640)
-    #print(worldcor_depthimg.max())
     color_heightmap = cv2.warpPerspective(color_img, A_heightmap, heightmap_size)
     depth_heightmap = cv2.warpPerspective(worldcor_depthimg, A_heightmap, heightmap_size)
-    #print(depth_heightmap.max())
     color_mask = cv2.warpPerspective(color_img, A_mask, colormask_size)
-    depth_mask = cv2.warpPerspective(worldcor_depthimg, A_mask, colormask_size)    
-    # A_htor = cv2.getPerspectiveTransform(dst_mask, src)
+    depth_mask = cv2.warpPerspective(worldcor_depthimg, A_mask, colormask_size)
     A_htor = cv2.getPerspectiveTransform(dst_heightmap, src)
 
     return color_heightmap, depth_heightmap, color_mask, depth_mask, A_htor
 
 def global_position(pix_mask_position, A_htor, cam_intrinsics, cam_pose, depth_img):
-    # print('pix_mask_position')
-    # print(pix_mask_position)
+
     pix_mask_x = int((pix_mask_position[2]*A_htor[0,0]+pix_mask_position[1]*A_htor[0,1]+A_htor[0,2])/(pix_mask_position[2]*A_htor[2,0]+pix_mask_position[1]*A_htor[2,1]+A_htor[2,2]))
     pix_mask_y = int((pix_mask_position[2]*A_htor[1,0]+pix_mask_position[1]*A_htor[1,1]+A_htor[1,2])/(pix_mask_position[2]*A_htor[2,0]+pix_mask_position[1]*A_htor[2,1]+A_htor[2,2]))
-    # print('pix_mask_x')
-    # print(pix_mask_x)
-    # print('pix_mask_y')
-    # print(pix_mask_y)
-    
     cam_pts_z = depth_img[pix_mask_y][pix_mask_x]
     cam_pts_x = np.multiply(pix_mask_x-cam_intrinsics[0][2],cam_pts_z/cam_intrinsics[0][0])    
     cam_pts_y = np.multiply(pix_mask_y-cam_intrinsics[1][2],cam_pts_z/cam_intrinsics[1][1]) 
     cam_pts = np.asarray([[cam_pts_x, cam_pts_y, cam_pts_z]])
-
     robot_cor = np.transpose(np.dot(cam_pose[0:3,0:3],np.transpose(cam_pts)) + np.tile(cam_pose[0:3,3:],(1,cam_pts.shape[0])))
     robot_cor.shape = (3)
-    # print('robot_cor')
-    # print(robot_cor)
 
     return robot_cor
 
@@ -186,7 +146,6 @@ def get_difference(color_heightmap, color_space, bg_color_heightmap):
     color_heightmap = color_heightmap.astype(float)/255.0
     color_heightmap.shape = (1, color_heightmap.shape[0], color_heightmap.shape[1], color_heightmap.shape[2])
     color_heightmap = np.tile(color_heightmap, (color_space.shape[0], 1, 1, 1))
-
     bg_color_heightmap = bg_color_heightmap.astype(float)/255.0
     bg_color_heightmap.shape = (1, bg_color_heightmap.shape[0], bg_color_heightmap.shape[1], bg_color_heightmap.shape[2])
     bg_color_heightmap = np.tile(bg_color_heightmap, (color_space.shape[0], 1, 1, 1))
@@ -424,11 +383,7 @@ def get_best_suction_angle(objects_number, masks_cter, box_mask_cors, bests_id, 
         height_s_aver[i] = max(center_glob_s_cors[i][2], box_glob_s_cors[i][0][2], box_glob_s_cors[i][1][2], box_glob_s_cors[i][2][2], box_glob_s_cors[i][3][2])
         distance_s_aver[i] = math.sqrt((center_glob_s_cors[i][0] - center_glob_s_cors[bests_id[0]][0])**2 + 
                                        (center_glob_s_cors[i][1] - center_glob_s_cors[bests_id[0]][1])**2)                
-    #height_s_aver[5] = height_s_aver[6]
-    # print('center_glob_s_cors',center_glob_s_cors)
-    # print('box_glob_s_cors',box_glob_s_cors)
-    # print('height_s_aver',height_s_aver)
-    
+   
     # open angle 
     for object_id in range(objects_number):
         if object_id != bests_id[0]:

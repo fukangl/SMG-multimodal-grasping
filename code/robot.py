@@ -12,13 +12,15 @@ from scipy.optimize import fsolve
 
 
 class Robot(object):
-    def __init__(self, is_sim, obj_mesh_dir, num_obj, workspace_limits,
-                 tcp_host_ip, tcp_port, rtc_host_ip, rtc_port,
-                 is_testing, test_preset_cases, test_preset_file):
+    def __init__(self, is_sim, obj_mesh_dir, num_obj, workspace_limits, is_cluttered, is_testing):
 
         self.is_sim = is_sim
+        self.obj_mesh_dir = obj_mesh_dir
         self.workspace_limits = workspace_limits
+        self.is_cluttered = is_cluttered
+        self.is_testing = is_testing
         
+         # 3D model parameters of the SMG
         self.torspring_angle = np.deg2rad(110)
         self.H, self.D, self.finger_length, self.finger_width, self.finger_depth = (47+6+55)/1000, 116/1000, 118/1000, 28.77/1000, 18.29/1000
         self.D0 = self.D - self.finger_depth
@@ -29,55 +31,41 @@ class Robot(object):
         self.relieve_s_position_1 = [-0.3,-0.6,0.2]        
         self.relieve_g_position = [-0.1,-0.6,0.3]
         self.relieve_g_position_1 = [-0.1,-0.6,0.2]       
-        self.relieve_demo_position = [-0.5,0,0.3]
-        
-        # demo
+        self.relieve_demo_position = [-0.5,0,0.3]        
 
         # If in simulation...
         if self.is_sim:
             # Read files in object mesh directory
             self.obj_mesh_dir_g = os.path.join(obj_mesh_dir,"grasping_suitable")
-            self.obj_mesh_dir_s = os.path.join(obj_mesh_dir,"suction_suitable")
-            #self.obj_mesh_dir_b = os.path.join(obj_mesh_dir,"both_suitable")            
+            self.obj_mesh_dir_s = os.path.join(obj_mesh_dir,"suction_suitable")           
             self.mesh_list_g = os.listdir(self.obj_mesh_dir_g)
-            self.mesh_list_s = os.listdir(self.obj_mesh_dir_s)
-            #self.mesh_list_b = os.listdir(self.obj_mesh_dir_b)            
+            self.mesh_list_s = os.listdir(self.obj_mesh_dir_s)           
             self.num_obj = num_obj    
             self.obj_index_g = []
             self.obj_index_s = []
-            #self.obj_index_b = []
+
             for num_ml in range(len(self.mesh_list_g)):
                 if os.path.splitext(self.mesh_list_g[num_ml])[1] == '.obj':
                     self.obj_index_g.append(num_ml)
             for num_ml in range(len(self.mesh_list_s)):
                 if os.path.splitext(self.mesh_list_s[num_ml])[1] == '.obj':
-                    self.obj_index_s.append(num_ml) 
-            # for num_ml in range(len(self.mesh_list_b)):
-            #     if os.path.splitext(self.mesh_list_b[num_ml])[1] == '.obj':
-            #         self.obj_index_b.append(num_ml)    
-                           
+                    self.obj_index_s.append(num_ml)    
+                                                              
             self.drop_xx,self.drop_yy = np.meshgrid(np.linspace(0,2,3), np.linspace(0,3,4))
             self.drop_xx.shape = (12,1)
             self.drop_yy.shape = (12,1)
-            self.drop_xx = self.workspace_limits[0][0] + (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.28)/2 + 0.14*self.drop_xx +0.05
-            self.drop_yy = self.workspace_limits[1][0] + (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.3)/2 + 0.125*self.drop_yy - 0.025
-            # self.drop_xx = self.workspace_limits[0][0] + (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.28)/2 + 0.13*self.drop_xx + 0.055        
-            # self.drop_yy = self.workspace_limits[1][0] + (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.3)/2 + 0.13*self.drop_yy -0.01
-            self.drop_xy = np.concatenate((self.drop_xx, self.drop_yy), axis=1)                       
+            if self.is_cluttered:
+                self.drop_xx = self.workspace_limits[0][0] + (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.28)/2 + 0.1*self.drop_xx +0.09
+                self.drop_yy = self.workspace_limits[1][0] + (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.3)/2 + 0.1*self.drop_yy
+            else:
+                self.drop_xx = self.workspace_limits[0][0] + (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.28)/2 + 0.14*self.drop_xx - 0.03
+                self.drop_yy = self.workspace_limits[1][0] + (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.3)/2 + 0.1*self.drop_yy
             
-            # video position
-            # self.drop_xy = np.asarray([[-0.65,-0.05],[-0.62,-0.15],[-0.48,-0.1],[-0.41,0.02],[-0.47,0.1],[-0.6,0.15],[-0.67,0.05],[-0.36,-0.15],
-            #                             [-0.55,0.0],[-0.35,0.17]])  
-            # self.drop_xyz = np.asarray([[-5.9996e-01,-2.5018e-02,3.4975e-02],[-4.5271e-01,3.2271e-02,2.0474e-02],[-5.6702e-01,-1.3488e-01,3.2786e-02],[-2.7429e-01,-2.4782e-02,4.1487e-02],[-6.2439e-01,1.0108e-01,2.2544e-02],
-            #                             [-2.9935e-01,1.0106e-01,1.1523e-02],[-3.9996e-01,-1.0002e-01,7.9780e-03],[-3.9996e-01,1.4998e-01,5.9780e-03],[-4.9997e-01,1.7498e-01,5.9779e-03]])
-            
-             
-            # self.ori_xyz = np.asarray([[-1.7215e+02,-7.7090e-01,3.9700e+01],[-8.3007e+01,-3.4956e+01,-8.9956e+01],[9.0000e+01,3.0000e+01,8.9862e+01],[8.0943e+01,7.6333e+01,1.1022e+02],[-8.9850e+01,1.1290e+01,-9.0000e+01],
-            #                             [-8.9850e+01,1.1290e+01,-9.0000e+01],[-9.0000e+01,-5.6261e+00,-9.0000e+01],[-9.0000e+01,+4.0000e+01,-9.0000e+01],[-9.0000e+01,+1.0000e+01,-9.0000e+01]])
+            self.drop_xy = np.concatenate((self.drop_xx, self.drop_yy), axis=1) 
+                                                  
 
-
-            # Make sure to have the server side running in V-REP:
-            # in a child script of a V-REP scene, add following command
+            # Make sure to have the server side running in CoppeliaSim:
+            # in a child script of a CoppeliaSim scene, add following command
             # to be executed just once, at simulation start:
             # simExtRemoteApiStart(19999)
             # then start simulation, and run this program.
@@ -87,40 +75,16 @@ class Robot(object):
 
             # Connect to simulator
             vrep.simxFinish(-1) # Just in case, close all opened connections
-            self.sim_client = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5) # Connect to V-REP on port 19997
+            self.sim_client = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5) # Connect to CoppeliaSim on port 19997
             if self.sim_client == -1:
-                print('Failed to connect to simulation (V-REP remote API server). Exiting.')
+                print('Failed to connect to simulation (CoppeliaSim remote API server). Exiting.')
                 sys.exit()
             else:
-                print('Connected to simulation.')               
-                
-                self.restart_sim()
-            self.is_testing = is_testing
-            self.test_preset_cases = test_preset_cases
-            self.test_preset_file = test_preset_file
+                print('Connected to simulation.')                               
+                self.restart_sim()            
 
             # Setup virtual camera in simulation
-            self.setup_sim_camera()
-
-            # If testing, read object meshes and poses from test case file
-            if self.is_testing and self.test_preset_cases:
-                file = open(self.test_preset_file, 'r')
-                file_content = file.readlines()
-                self.test_obj_mesh_files = []
-                self.test_obj_mesh_colors = []
-                self.test_obj_positions = []
-                self.test_obj_orientations = []
-                for object_idx in range(self.num_obj):
-                    file_content_curr_object = file_content[object_idx].split()
-                    self.test_obj_mesh_files.append(os.path.join(self.obj_mesh_dir,file_content_curr_object[0]))
-                    self.test_obj_mesh_colors.append([float(file_content_curr_object[1]),float(file_content_curr_object[2]),float(file_content_curr_object[3])])
-                    self.test_obj_positions.append([float(file_content_curr_object[4]),float(file_content_curr_object[5]),float(file_content_curr_object[6])])
-                    self.test_obj_orientations.append([float(file_content_curr_object[7]),float(file_content_curr_object[8]),float(file_content_curr_object[9])])
-                file.close()
-                self.obj_mesh_color = np.asarray(self.test_obj_mesh_colors)
-
-            # Add objects to simulation environment
-            #self.add_objects()
+            self.setup_sim_camera()            
 
     def setup_sim_camera(self):
 
@@ -153,73 +117,34 @@ class Robot(object):
         if self.num_obj_g > 0:
             self.num_obj_s = np.random.randint(6)
         else:
-            self.num_obj_s = max(np.random.randint(6),1)
-        #self.num_obj_b = 1 + np.random.randint(3)
-        
+            self.num_obj_s = max(np.random.randint(6),1)    
         self.obj_mesh_ind_g = np.random.randint(0, len(self.obj_index_g), size=self.num_obj_g)
         self.obj_mesh_ind_s = np.random.randint(0, len(self.obj_index_s), size=self.num_obj_s)
-        #self.obj_mesh_ind_b = np.random.randint(0, len(self.obj_index_b), size=self.num_obj_b)
-        #print(self.obj_mesh_ind_s)
-        # print('self.mesh_list_g',self.mesh_list_g)
-        # print('self.mesh_list_s',self.mesh_list_s)
-        # print('self.obj_index_g',self.obj_index_g)
-        # print('self.obj_index_s',self.obj_index_s)
-        # time.sleep(10)
-        # self.obj_mesh_ind_g = [5,3,4,7,2]
-        # self.obj_mesh_ind_s = [5,3,0,2]
-        
         for i in range(len(self.obj_mesh_ind_g)):
             self.obj_mesh.append(os.path.join(self.obj_mesh_dir_g, self.mesh_list_g[self.obj_index_g[self.obj_mesh_ind_g[i]]]))
         for i in range(len(self.obj_mesh_ind_s)):
             self.obj_mesh.append(os.path.join(self.obj_mesh_dir_s, self.mesh_list_s[self.obj_index_s[self.obj_mesh_ind_s[i]]]))
-        # for i in range(len(self.obj_mesh_ind_b)):
-        #     self.obj_mesh.append(os.path.join(self.obj_mesh_dir_b, self.mesh_list_b[self.obj_index_b[self.obj_mesh_ind_b[i]]]))        
-        # print('self.obj_mesh')
-        # print(self.obj_mesh)
-          
+
         self.drop_id = random.sample(range(0,10),len(self.obj_mesh))
-        # print('self.drop_id')
-        # print(self.drop_id)
+
         
         for object_idx in range(len(self.obj_mesh)):
             curr_mesh_file = self.obj_mesh[object_idx]                                   
-            # print('curr_mesh_file')
-            # print(curr_mesh_file)
-            if self.is_testing and self.test_preset_cases:
-                curr_mesh_file = self.test_obj_mesh_files[object_idx]
             curr_shape_name = 'shape_%02d' % object_idx
-            
-            # drop_x = (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.2) * np.random.random_sample() + self.workspace_limits[0][0] + 0.1
-            # drop_y = (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.2) * np.random.random_sample() + self.workspace_limits[1][0] + 0.1            
-            xy = self.drop_xy[self.drop_id[object_idx]]
-            #xy = self.drop_xy[object_idx]                        
+            xy = self.drop_xy[self.drop_id[object_idx]]                      
             drop_x = xy[0]
             drop_y = xy[1]                        
             object_position = [drop_x, drop_y, 0.08]            
-            #object_position = [-0.5, 0, 0.2]            
-            #object_orientation = [2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample()]
             orienid_1  = random.sample([-0.5,0.5], 1)
             orienid_2  = 80*random.uniform(-1, 1)                                     
-            object_orientation = [orienid_1[0]*np.pi, orienid_2, orienid_1[0]*np.pi]                        
-
-            # video demo                                    
-            # object_position = [self.drop_xyz[object_idx][0],self.drop_xyz[object_idx][1],self.drop_xyz[object_idx][2]] 
-            # object_orientation = [np.deg2rad(self.ori_xyz[object_idx][0]),np.deg2rad(self.ori_xyz[object_idx][1]),np.deg2rad(self.ori_xyz[object_idx][2])] 
-            
-            
-            if self.is_testing and self.test_preset_cases:
-                object_position = [self.test_obj_positions[object_idx][0], self.test_obj_positions[object_idx][1], self.test_obj_positions[object_idx][2]]
-                object_orientation = [self.test_obj_orientations[object_idx][0], self.test_obj_orientations[object_idx][1], self.test_obj_orientations[object_idx][2]]
-            ret_resp,ret_ints,ret_floats,ret_strings,ret_buffer = vrep.simxCallScriptFunction(self.sim_client, 'remoteApiCommandServer',vrep.sim_scripttype_childscript,'importShape',[0,0,255,0], object_position + object_orientation, [curr_mesh_file, curr_shape_name,], bytearray(), vrep.simx_opmode_blocking)
-                           
+            object_orientation = [orienid_1[0]*np.pi, orienid_2, orienid_1[0]*np.pi]                             
+            ret_resp,ret_ints,ret_floats,ret_strings,ret_buffer = vrep.simxCallScriptFunction(self.sim_client, 'remoteApiCommandServer',vrep.sim_scripttype_childscript,'importShape',[0,0,255,0], object_position + object_orientation, [curr_mesh_file, curr_shape_name,], bytearray(), vrep.simx_opmode_blocking)                           
             if ret_resp == 8:
                 print('Failed to add new objects to simulation. Please restart.')
-                sys.exit()
-            
+                sys.exit()            
             curr_shape_handle = ret_ints[0]
             self.object_handles.append(curr_shape_handle)
-            if not (self.is_testing and self.test_preset_cases):
-                time.sleep(0.5)        
+            time.sleep(0.5)        
         self.grasp_handle = self.object_handles[:len(self.obj_mesh_ind_g)]
         self.suction_handle = self.object_handles[len(self.obj_mesh_ind_g):]
         self.un_object_handles = self.object_handles
@@ -262,35 +187,6 @@ class Robot(object):
         sim_ret, self.sgripperhandle[1][3] = vrep.simxGetObjectHandle(self.sim_client, 'jointD_2', vrep.simx_opmode_blocking)
         sim_ret, self.sgripperhandle[2][3] = vrep.simxGetObjectHandle(self.sim_client, 'jointD_3', vrep.simx_opmode_blocking)
         sim_ret, self.sgripperhandle[3][3] = vrep.simxGetObjectHandle(self.sim_client, 'jointD_4', vrep.simx_opmode_blocking)
-
-        # sim_ret, self.fsensorhandle[0][0] = vrep.simxGetObjectHandle(self.sim_client, 'Force_sensor1', vrep.simx_opmode_blocking)
-        # sim_ret, self.fsensorhandle[1][0] = vrep.simxGetObjectHandle(self.sim_client, 'Force_sensor2', vrep.simx_opmode_blocking)
-        # sim_ret, self.fsensorhandle[2][0] = vrep.simxGetObjectHandle(self.sim_client, 'Force_sensor3', vrep.simx_opmode_blocking)
-        # sim_ret, self.fsensorhandle[3][0] = vrep.simxGetObjectHandle(self.sim_client, 'Force_sensor4', vrep.simx_opmode_blocking)
-        
-        # sim_ret, self.spadhandle[0][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPad1', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadhandle[1][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPad2', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadhandle[2][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPad3', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadhandle[3][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPad4', vrep.simx_opmode_blocking)
-        
-        # sim_ret, self.spadsensorhandle[0][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadSensor11', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadsensorhandle[1][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadSensor12', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadsensorhandle[2][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadSensor13', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadsensorhandle[3][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadSensor14', vrep.simx_opmode_blocking)
-                               
-        # sim_ret, self.sdummyhandle[0][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy11', vrep.simx_opmode_blocking)   
-        # sim_ret, self.sdummyhandle[0][1] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy12', vrep.simx_opmode_blocking)
-        # sim_ret, self.sdummyhandle[1][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy21', vrep.simx_opmode_blocking)   
-        # sim_ret, self.sdummyhandle[1][1] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy22', vrep.simx_opmode_blocking)
-        # sim_ret, self.sdummyhandle[2][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy31', vrep.simx_opmode_blocking)   
-        # sim_ret, self.sdummyhandle[2][1] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy32', vrep.simx_opmode_blocking)
-        # sim_ret, self.sdummyhandle[3][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy41', vrep.simx_opmode_blocking)   
-        # sim_ret, self.sdummyhandle[3][1] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLoopClosureDummy42', vrep.simx_opmode_blocking)
-        
-        # sim_ret, self.spadlinkhandle[0][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLink1', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadlinkhandle[1][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLink2', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadlinkhandle[2][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLink3', vrep.simx_opmode_blocking)
-        # sim_ret, self.spadlinkhandle[3][0] = vrep.simxGetObjectHandle(self.sim_client, 'suctionPadLink4', vrep.simx_opmode_blocking)                
         
         sim_ret, self.suction_tip_handle[0][0] = vrep.simxGetObjectHandle(self.sim_client,'suction_tip1',vrep.simx_opmode_blocking)
         sim_ret, self.suction_tip_handle[1][0] = vrep.simxGetObjectHandle(self.sim_client,'suction_tip2',vrep.simx_opmode_blocking)
@@ -299,15 +195,13 @@ class Robot(object):
         
         sim_ret, self.grasp_target_handle = vrep.simxGetObjectHandle(self.sim_client,'gs_target',vrep.simx_opmode_blocking)
         sim_ret, self.grasp_tip_handle = vrep.simxGetObjectHandle(self.sim_client,'grasp_tip',vrep.simx_opmode_blocking)
-        
-                                       
-
+                                            
         vrep.simxSetObjectPosition(self.sim_client, self.grasp_target_handle, -1, (-0.5,0,0.3), vrep.simx_opmode_blocking)
         vrep.simxStopSimulation(self.sim_client, vrep.simx_opmode_blocking)
         vrep.simxStartSimulation(self.sim_client, vrep.simx_opmode_blocking)
         time.sleep(1)
         sim_ret, gripper_position = vrep.simxGetObjectPosition(self.sim_client, self.grasp_tip_handle, -1, vrep.simx_opmode_blocking)
-        while gripper_position[2] > 0.4: # V-REP bug requiring multiple starts and stops to restart
+        while gripper_position[2] > 0.4: # CoppeliaSim bug requiring multiple starts and stops to restart
             vrep.simxStopSimulation(self.sim_client, vrep.simx_opmode_blocking)
             vrep.simxStartSimulation(self.sim_client, vrep.simx_opmode_blocking)
             time.sleep(0.5)
@@ -351,16 +245,6 @@ class Robot(object):
         return color_img, depth_img
 
 
-    # def get_obj_positions(self):
-
-    #     obj_positions = []
-    #     for object_handle in self.object_handles:
-    #         sim_ret, object_position = vrep.simxGetObjectPosition(self.sim_client, object_handle, -1, vrep.simx_opmode_blocking)
-    #         obj_positions.append(object_position)
-
-    #     return obj_positions
-
-
     def get_obj_positions(self,handles):
 
         obj_positions = []
@@ -380,12 +264,8 @@ class Robot(object):
                     deg = step_iter*angle_step
                     for i in range(4):
                         for j in range(4):
-                            vrep.simxSetJointPosition(self.sim_client, self.sgripperhandle[j][i], deg, vrep.simx_opmode_blocking)                  
-            
+                            vrep.simxSetJointPosition(self.sim_client, self.sgripperhandle[j][i], deg, vrep.simx_opmode_blocking)            
             elif is_suction == 0:
-                # grasp_force = np.zeros((4,3))
-                # grasp_sumforce = np.zeros(4)
-                # exit_called = False
                 if rotate_angle_1 > 0:
                     angle_mag = rotate_angle_1/4
                     angle_step = angle_mag/2
@@ -393,48 +273,26 @@ class Robot(object):
                         deg = step_iter*angle_step
                         for i in range(4):
                             for j in range(4):
-                                vrep.simxSetJointPosition(self.sim_client, self.sgripperhandle[j][i], deg, vrep.simx_opmode_blocking)
-                
+                                vrep.simxSetJointPosition(self.sim_client, self.sgripperhandle[j][i], deg, vrep.simx_opmode_blocking)                
             elif is_suction == -1:                
-                # exit_called = False
                 angle_mag = max(rotate_angle_2/4,0.001)
                 angle_step = angle_mag/4
                 for step_iter in range(1,int(angle_mag/angle_step)+1):
                     deg = step_iter*angle_step + rotate_angle_1/4
                     for i in range(4):
                         for j in range(4):
-                            vrep.simxSetJointPosition(self.sim_client, self.sgripperhandle[j][i], deg, vrep.simx_opmode_blocking)
-                
-                      
-                        # for force_num in range(4):
-                        #     _,_, grasp_force[force_num],_ = vrep.simxReadForceSensor(self.sim_client, self.fsensorhandle[force_num][0], vrep.simx_opmode_blocking)
-                        #     grasp_sumforce[force_num] = math.sqrt(grasp_force[force_num][0]**2 + grasp_force[force_num][1]**2 + grasp_force[force_num][2]**2)
-                        # # if grasp_sumforce[0]>50 or grasp_sumforce[1]>50 or grasp_sumforce[2]>50 or grasp_sumforce[3]>50:
-                        # if (grasp_sumforce[0]>50 and grasp_sumforce[2]>50) and (grasp_sumforce[1]>50 and grasp_sumforce[3]>50):
-                        #     exit_called = True
-                        #     break                       
-                    # if exit_called == True:
-                    #     break                    
-                            
-            # for step_iter in range(1,3):
-            #     deg = step_iter*deg_step
-            #     for i in range(4):
-            #         vrep.simxSetJointPosition(self.sim_client, self.upperhandle[i][0], deg, vrep.simx_opmode_blocking)   
-       
+                            vrep.simxSetJointPosition(self.sim_client, self.sgripperhandle[j][i], deg, vrep.simx_opmode_blocking)                       
 
     def pre_rotate_angle(self, distance):                 
         if distance >= (self.D0 + 2*self.finger_length*np.sin(self.torspring_angle-np.pi/2))/math.sqrt(2):
             rotate_angle = 0
         else:
             distance = max(distance*math.sqrt(2),0.03)
-            #print('distance',distance)
             def func(x):
                 return [self.D0 - 2*self.finger_length*(np.cos(self.torspring_angle - np.pi/2) - np.sin(x[0]))/(self.torspring_angle - x[0]) - distance*x[1],
                         x[1]-1]   
             root = fsolve(func, [np.pi/100,1])
-            #print('root[0]',root[0])
-            rotate_angle = self.torspring_angle - root[0]
-            
+            rotate_angle = self.torspring_angle - root[0]            
         return rotate_angle
     
     def open_gripper(self, asynch=False):
@@ -472,9 +330,7 @@ class Robot(object):
                     vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(grasp_target_position[0] + move_step[0], grasp_target_position[1] + move_step[1], grasp_target_position[2] + move_step[2]),vrep.simx_opmode_blocking)
                     sim_ret, grasp_target_position = vrep.simxGetObjectPosition(self.sim_client,self.grasp_target_handle,-1,vrep.simx_opmode_blocking)                                                                                                                                                                                                                                             
                 vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(grasp_tool_position[0],grasp_tool_position[1],grasp_tool_position[2]),vrep.simx_opmode_blocking)
-               
-
-                
+                               
             elif suction_id == -1:
                 
                 sim_ret, grasp_target_position = vrep.simxGetObjectPosition(self.sim_client, self.grasp_target_handle,-1,vrep.simx_opmode_blocking)                            
@@ -499,19 +355,7 @@ class Robot(object):
                 
                 vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(tool_position[0],tool_position[1],tool_position[2]),vrep.simx_opmode_blocking)
 
-
-            elif suction_id == -2:                
-                # sim_ret, grasp_target_position = vrep.simxGetObjectPosition(self.sim_client, self.grasp_target_handle,-1,vrep.simx_opmode_blocking)            
-                # move_direction = np.asarray([tool_position[0] - grasp_target_position[0], tool_position[1] - grasp_target_position[1], tool_position[2] - grasp_target_position[2]])
-                # move_magnitude = np.linalg.norm(move_direction)
-                # move_step = 0.02*move_direction/move_magnitude
-                # num_move_steps = int(np.floor(move_magnitude/0.02))
-    
-                # for step_iter in range(num_move_steps):
-                #     vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(grasp_target_position[0] + move_step[0], grasp_target_position[1] + move_step[1], grasp_target_position[2] + move_step[2]),vrep.simx_opmode_blocking)
-                #     sim_ret, grasp_target_position = vrep.simxGetObjectPosition(self.sim_client,self.grasp_target_handle,-1,vrep.simx_opmode_blocking)                                                
-                # vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(tool_position[0],tool_position[1],tool_position[2]),vrep.simx_opmode_blocking)
-                
+            elif suction_id == -2:                                
                 sim_ret, grasp_target_position = vrep.simxGetObjectPosition(self.sim_client, self.grasp_target_handle,-1,vrep.simx_opmode_blocking)                            
                 move_direction = np.asarray([tool_position[0] - grasp_target_position[0], tool_position[1] - grasp_target_position[1], tool_position[2] - grasp_target_position[2]])                
                 move_magnitude = np.linalg.norm(move_direction*0.5)
@@ -550,18 +394,7 @@ class Robot(object):
             return 1
         else:
             return 0                
-                                           
-        #     grasp_force = np.zeros((4,3))
-        #     grasp_sumforce = np.zeros(4)            
-        #     for force_num in range(4):
-        #         _,_, grasp_force[force_num],_ = vrep.simxReadForceSensor(self.sim_client, self.fsensorhandle[force_num][0], vrep.simx_opmode_blocking)
-        #         grasp_sumforce[force_num] = math.sqrt(grasp_force[force_num][0]**2 + grasp_force[force_num][1]**2 + grasp_force[force_num][2]**2)
-        #     if grasp_sumforce[0]>1 or grasp_sumforce[1]>1 or grasp_sumforce[2]>1 or grasp_sumforce[3]>1:
-        #         return 1
-        #     else:
-        #         return 0  
-        
-        
+                                                 
     
     def suction_active(self, is_active, suction_id=-1):
         
@@ -607,8 +440,7 @@ class Robot(object):
         position_2 = object_positions_z[num_2]
         handle_1 = self.object_handles[num_1]
         handle_2 = self.object_handles[num_2]                      
-                    
-        
+                            
         # training & testing
         self.suction_active(is_active=False,suction_id=-1)        
         if position_1 > 0.11:
@@ -624,32 +456,7 @@ class Robot(object):
             suction_success = 1
         if grasp_success_1:
             grasp_success = 1
-        
-        # # video demo
-        # if suction_success_1:
-        #     suction_success = 1
-        #     self.move_to(self.relieve_s_position, None, suction_id=-2) 
- 
-        #     self.suction_active(is_active=False,suction_id=-1)
-        #     if position_2 > 0.07:
-        #         # orienid_1  = random.sample([-0.5,0.5], 1)
-        #         # orienid_2  = 80*random.uniform(-1, 1)                                     
-        #         # object_orientation = [orienid_1[0]*np.pi, orienid_2, orienid_1[0]*np.pi]
-        #         vrep.simxSetObjectPosition(self.sim_client, handle_2, -1,(-0.35+0.005*float(num_2),-0.65+0.005*float(num_2),0.03),vrep.simx_opmode_blocking)
-        #         #vrep.simxSetObjectOrientation(self.sim_client, handle_2, -1, object_orientation, vrep.simx_opmode_blocking)
-            
-        #     if grasp_success_1:
-        #         grasp_success = 1
-        #         self.move_to(self.relieve_g_position, None, suction_id=-2)
-        #     self.open_gripper()
-        # else:
-        #     if grasp_success_1:
-        #         grasp_success = 1
-        #         self.move_to(self.relieve_g_position, None, suction_id=-2)                
-        #     self.suction_active(is_active=False,suction_id=-1)
-        #     self.open_gripper()                           
-                
-        
+                        
         # reset the object if its "z" < 0
         for un_number in range(len(object_positions_z)):                                                            
             if object_positions[un_number,2] < 0.001:                
@@ -677,13 +484,12 @@ class Robot(object):
         object_positions_z = object_positions[:,2]        
         positions_sorted = np.argsort(object_positions_z)
         num_1 = positions_sorted[-1]
-       # num_2 = positions_sorted[-2]
+        # num_2 = positions_sorted[-2]
         position_1 = object_positions_z[num_1]
-        #position_2 = object_positions_z[num_2]
+        # position_2 = object_positions_z[num_2]
         handle_1 = self.object_handles[num_1]
-       # handle_2 = self.object_handles[num_2]
-        
-       
+        # handle_2 = self.object_handles[num_2]
+               
         # training & testing
         self.suction_active(is_active=False,suction_id=-1)        
         if position_1 > 0.11:
@@ -692,14 +498,11 @@ class Robot(object):
         # if position_2 > 0.11:
         #     vrep.simxSetObjectPosition(self.sim_client, handle_2, -1,(-0.5, 0.5 + 0.1*float(num_2), 0.1),vrep.simx_opmode_blocking)                                    
         #     self.successful_handles.append(handle_2)
-        #self.un_object_handles = list(set(self.object_handles).difference(set(self.successful_handles)))
-        
-        
+        # self.un_object_handles = list(set(self.object_handles).difference(set(self.successful_handles)))
+                
         if grasp_success_1:
             grasp_first_success = 1         
-            # # video demo
-            # self.move_to(self.relieve_g_position, None, suction_id=-2)                  
-         
+            # self.move_to(self.relieve_g_position, None, suction_id=-2)                           
         self.open_gripper()
         self.suction_active(is_active=False,suction_id=-1)                        
         # reset the object if its "z" < 0
@@ -722,13 +525,12 @@ class Robot(object):
         
         positions_sorted = np.argsort(object_positions_z)
         num_1 = positions_sorted[-1]
-#        num_2 = positions_sorted[-2]
+        # num_2 = positions_sorted[-2]
         position_1 = object_positions_z[num_1]
-#        position_2 = object_positions_z[num_2]
+        # position_2 = object_positions_z[num_2]
         handle_1 = self.object_handles[num_1]
-#        handle_2 = self.object_handles[num_2]
-                        
-        
+        # handle_2 = self.object_handles[num_2]
+                              
         # training & testing
         self.suction_active(is_active=False,suction_id=-1)        
         if position_1 > 0.11:
@@ -737,17 +539,15 @@ class Robot(object):
         # if position_2 > 0.11:
         #     vrep.simxSetObjectPosition(self.sim_client, handle_2, -1,(-0.5, 0.5 + 0.1*float(num_2), 0.1),vrep.simx_opmode_blocking)                                    
         #     self.successful_handles.append(handle_2)
-        #self.un_object_handles = list(set(self.object_handles).difference(set(self.successful_handles)))
+        # self.un_object_handles = list(set(self.object_handles).difference(set(self.successful_handles)))
         
         if suction_success_1:
             suction_first_success = 1
-            # # video demo
             # self.move_to(self.relieve_s_position, None, suction_id=-2)                                  
         self.suction_active(is_active=False,suction_id=-1)
         # if position_1 > 0.07:
         #     vrep.simxSetObjectPosition(self.sim_client, handle_1, -1,(-0.35+0.005*float(num_1),-0.65+0.005*float(num_1),0.02),vrep.simx_opmode_blocking)
-
-                                                       
+                                                      
         self.open_gripper()
         for un_number in range(len(object_positions_z)):                                                 
             if object_positions[un_number,2] < 0.001:                
@@ -887,49 +687,14 @@ class Robot(object):
             # Simultaneously move and rotate gripper
             for step_iter in range(num_move_steps):
                 vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(grasp_target_position[0] + move_step[0]*step_iter, grasp_target_position[1] + move_step[1]*step_iter, grasp_target_position[2] + move_step[2]*step_iter),vrep.simx_opmode_blocking)              
-            vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(tool_position[0],tool_position[1],tool_position[2]),vrep.simx_opmode_blocking)            
-            
-            #time.sleep(10)
+            vrep.simxSetObjectPosition(self.sim_client,self.grasp_target_handle,-1,(tool_position[0],tool_position[1],tool_position[2]),vrep.simx_opmode_blocking)                        
             for step_iter in range(num_rotation_steps):                
                 vrep.simxSetObjectOrientation(self.sim_client, self.grasp_target_handle, -1, (0, 0, grasp_orientation[2] + rotation_step*step_iter), vrep.simx_opmode_blocking)           
-            vrep.simxSetObjectOrientation(self.sim_client, self.grasp_target_handle, -1, (0, 0, tool_rotation_angle), vrep.simx_opmode_blocking)
-                        
+            vrep.simxSetObjectOrientation(self.sim_client, self.grasp_target_handle, -1, (0, 0, tool_rotation_angle), vrep.simx_opmode_blocking)                        
             sim_ret, grasp_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.grasp_target_handle, self.suction_tip_handle[self.suction_used_id][0], vrep.simx_opmode_blocking)            
             
             for ro_iter in range(self.ro_steps):
-                vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,self.suction_tip_handle[self.suction_used_id][0],(grasp_orientation[0] + self.ro_angle[0]/self.ro_steps, grasp_orientation[1] + self.ro_angle[1]/self.ro_steps, grasp_orientation[2] + self.ro_angle[2]/self.ro_steps),vrep.simx_opmode_blocking)
-            #vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,self.suction_tip_handle[0][0],(grasp_orientation[0] + ro_angle,0,0),vrep.simx_opmode_blocking)                                                   
-            #time.sleep(10)                        
-
-            # # Rotate the suction to parallel to the plate            
-            # tip_rotation_angle = np.pi/2 - tip_angle
-            # self.ro_steps = 20
-            # sim_ret, grasp_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.grasp_target_handle, self.suction_tip_handle[0][0], vrep.simx_opmode_blocking)                                               
-            # # for ro_iter in range(self.ro_steps):
-            # #     vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,self.suction_tip_handle[0][0],(grasp_orientation[0] + tip_rotation_angle/self.ro_steps,0,0),vrep.simx_opmode_blocking)
-            # vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,self.suction_tip_handle[0][0],(grasp_orientation[0],0,0),vrep.simx_opmode_blocking)                                                   
-            
-          
-            # sim, suction_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.suction_tip_handle[0][0], -1, vrep.simx_opmode_blocking)
-            # tip_rotation_angle = heightmap_rotation_angle - suction_orientation
-            # # print('suction_orientation',suction_orientation)
-            # # print('tip_rotation_angle',tip_rotation_angle)                                                            
-            # self.ro_steps = 20
-            # sim_ret, grasp_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.grasp_target_handle, -1, vrep.simx_opmode_blocking)                                               
-            # print('grasp_orientation',grasp_orientation)
-            # # for ro_iter in range(self.ro_steps):
-            # #     vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,self.suction_tip_handle[0][0],(grasp_orientation[0] + tip_rotation_angle/self.ro_steps,0,0),vrep.simx_opmode_blocking)
-            # vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,-1,(grasp_orientation[0] + tip_rotation_angle[0], grasp_orientation[1] + tip_rotation_angle[1], grasp_orientation[2] + 0),vrep.simx_opmode_blocking)                                                   
-            # # time.sleep(2)
-            # # for ro_iter in range(self.ro_steps):
-            # #     vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,-1,(grasp_orientation[0] + tip_rotation_angle[0], grasp_orientation[1] + tip_rotation_angle[1], grasp_orientation[2] + 1.5/self.ro_steps),vrep.simx_opmode_blocking) 
-            # sim_ret, grasp_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.grasp_target_handle, self.suction_tip_handle[0][0], vrep.simx_opmode_blocking)                                               
-            # print('grasp_orientation',grasp_orientation)
-            # sim, suction_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.suction_tip_handle[0][0], -1, vrep.simx_opmode_blocking)
-            # print('suction_orientation',suction_orientation)
-                                    
-            
-            #time.sleep(10)
+                vrep.simxSetObjectOrientation(self.sim_client,self.grasp_target_handle,self.suction_tip_handle[self.suction_used_id][0],(grasp_orientation[0] + self.ro_angle[0]/self.ro_steps, grasp_orientation[1] + self.ro_angle[1]/self.ro_steps, grasp_orientation[2] + self.ro_angle[2]/self.ro_steps),vrep.simx_opmode_blocking)                       
             self.suction_active(is_active=False, suction_id=-1)            
             # Approach suction point
             self.move_to(position, None, suction_id=self.suction_used_id)
@@ -937,20 +702,10 @@ class Robot(object):
             suction_success,sucction_handle = self.suction_active(is_active=True, suction_id = self.suction_used_id)
             # print('suction_success: %r' % (suction_success))
             if sucction_handle !=0:
-                self.sucked_handles.append(sucction_handle)
-             
-            # # re-sucking
-            # if not suction_success:
-            #     time.sleep(3)
-            #     motion_theta = np.radians(random.randrange(1,360))
-            #     position0 = [0.005*np.cos(motion_theta),0.005*np.sin(motion_theta),0]
-            #     self.move_to(position+position0, None, is_suction=True)
-            #     self.suction_active(is_active=True)
-            #time.sleep(10)
+                self.sucked_handles.append(sucction_handle)                         
             # Move gripper to location above suction target
             self.move_to(location_above_suction_point, None, suction_id=-2)           
-            # Compute gripper orientation and rotation increments
-            
+            # Compute gripper orientation and rotation increments            
             sim_ret, grasp_orientation = vrep.simxGetObjectOrientation(self.sim_client, self.grasp_target_handle, -1, vrep.simx_opmode_blocking)            
             rotation_step0 = grasp_orientation[0]/self.ro_steps
             rotation_step1 = grasp_orientation[1]/self.ro_steps
@@ -960,8 +715,4 @@ class Robot(object):
             vrep.simxSetObjectOrientation(self.sim_client, self.grasp_target_handle, -1, (0, 0, grasp_orientation[2]), vrep.simx_opmode_blocking)
 
         return suction_success
-
-
-
-
 

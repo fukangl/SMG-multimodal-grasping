@@ -108,8 +108,7 @@ class Trainer(object):
         self.predicted_value_log = []
         self.use_heuristic_log = []
         self.is_exploit_log = []
-        self.clearance_log = []
-        
+        self.clearance_log = []        
         self.grasping_type_log = []
         self.episode_success_log = []
         self.training_loss_log = []
@@ -163,52 +162,21 @@ class Trainer(object):
     def forward(self, depth_heightmap, m_depth_heightmap, style=0, is_volatile=False, is_target=False, specific_rotation=-1):
 
         # Apply 2x scale to input heightmaps
-        # color_heightmap_2x = ndimage.zoom(color_heightmap, zoom=[2,2,1], order=0)
         depth_heightmap_2x = ndimage.zoom(depth_heightmap, zoom=[2,2], order=0)
-        # assert(color_heightmap_2x.shape[0:2] == depth_heightmap_2x.shape[0:2])
-                
-        # m_color_heightmap_2x = ndimage.zoom(m_color_heightmap, zoom=[2,2,1], order=0)
         m_depth_heightmap_2x = ndimage.zoom(m_depth_heightmap, zoom=[2,2], order=0) 
-        # assert(m_color_heightmap_2x.shape[0:2] == m_depth_heightmap_2x.shape[0:2])
 
         # Add extra padding (to handle rotations inside network)
         diag_length = float(depth_heightmap_2x.shape[0]) * np.sqrt(2)
         diag_length = np.ceil(diag_length/32)*32
         padding_width = int((diag_length - depth_heightmap_2x.shape[0])/2)
-        # color_heightmap_2x_r =  np.pad(color_heightmap_2x[:,:,0], padding_width, 'constant', constant_values=0)
-        # color_heightmap_2x_r.shape = (color_heightmap_2x_r.shape[0], color_heightmap_2x_r.shape[1], 1)
-        # color_heightmap_2x_g =  np.pad(color_heightmap_2x[:,:,1], padding_width, 'constant', constant_values=0)
-        # color_heightmap_2x_g.shape = (color_heightmap_2x_g.shape[0], color_heightmap_2x_g.shape[1], 1)
-        # color_heightmap_2x_b =  np.pad(color_heightmap_2x[:,:,2], padding_width, 'constant', constant_values=0)
-        # color_heightmap_2x_b.shape = (color_heightmap_2x_b.shape[0], color_heightmap_2x_b.shape[1], 1)
-        # color_heightmap_2x = np.concatenate((color_heightmap_2x_r, color_heightmap_2x_g, color_heightmap_2x_b), axis=2)
         depth_heightmap_2x =  np.pad(depth_heightmap_2x, padding_width, 'constant', constant_values=0)
-        
-        # m_color_heightmap_2x_r =  np.pad(m_color_heightmap_2x[:,:,0], padding_width, 'constant', constant_values=0)
-        # m_color_heightmap_2x_r.shape = (m_color_heightmap_2x_r.shape[0], m_color_heightmap_2x_r.shape[1], 1)
-        # m_color_heightmap_2x_g =  np.pad(m_color_heightmap_2x[:,:,1], padding_width, 'constant', constant_values=0)
-        # m_color_heightmap_2x_g.shape = (m_color_heightmap_2x_g.shape[0], m_color_heightmap_2x_g.shape[1], 1)
-        # m_color_heightmap_2x_b =  np.pad(m_color_heightmap_2x[:,:,2], padding_width, 'constant', constant_values=0)
-        # m_color_heightmap_2x_b.shape = (m_color_heightmap_2x_b.shape[0], m_color_heightmap_2x_b.shape[1], 1)
-        # m_color_heightmap_2x = np.concatenate((m_color_heightmap_2x_r, m_color_heightmap_2x_g, m_color_heightmap_2x_b), axis=2)
         m_depth_heightmap_2x =  np.pad(m_depth_heightmap_2x, padding_width, 'constant', constant_values=0)
-
-
-        # # Pre-process color image (scale and normalize)
-        # image_mean = [0.485, 0.456, 0.406]
-        # image_std = [0.229, 0.224, 0.225]
-        # input_color_image = color_heightmap_2x.astype(float)/255
-        # m_input_color_image = m_color_heightmap_2x.astype(float)/255
-        # for c in range(3):
-        #     input_color_image[:,:,c] = (input_color_image[:,:,c] - image_mean[c])/image_std[c]
-        #     m_input_color_image[:,:,c] = (m_input_color_image[:,:,c] - image_mean[c])/image_std[c]
 
         # Pre-process depth image (normalize)
         image_mean = [0.01, 0.01, 0.01]
         image_std = [0.03, 0.03, 0.03]
         depth_heightmap_2x.shape = (depth_heightmap_2x.shape[0], depth_heightmap_2x.shape[1], 1)
-        input_depth_image = np.concatenate((depth_heightmap_2x, depth_heightmap_2x, depth_heightmap_2x), axis=2)
-        
+        input_depth_image = np.concatenate((depth_heightmap_2x, depth_heightmap_2x, depth_heightmap_2x), axis=2)        
         m_depth_heightmap_2x.shape = (m_depth_heightmap_2x.shape[0], m_depth_heightmap_2x.shape[1], 1)
         m_input_depth_image = np.concatenate((m_depth_heightmap_2x, m_depth_heightmap_2x, m_depth_heightmap_2x), axis=2)
         
@@ -217,36 +185,26 @@ class Trainer(object):
             m_input_depth_image[:,:,c] = (m_input_depth_image[:,:,c] - image_mean[c])/image_std[c]
 
         # Construct minibatch of size 1 (b,c,h,w)
-        # input_color_image.shape = (input_color_image.shape[0], input_color_image.shape[1], input_color_image.shape[2], 1)
         input_depth_image.shape = (input_depth_image.shape[0], input_depth_image.shape[1], input_depth_image.shape[2], 1)
-        # input_color_data = torch.from_numpy(input_color_image.astype(np.float32)).permute(3,2,0,1)
         input_depth_data = torch.from_numpy(input_depth_image.astype(np.float32)).permute(3,2,0,1)
-        
-        # m_input_color_image.shape = (m_input_color_image.shape[0], m_input_color_image.shape[1], m_input_color_image.shape[2], 1)
         m_input_depth_image.shape = (m_input_depth_image.shape[0], m_input_depth_image.shape[1], m_input_depth_image.shape[2], 1)
-        # m_input_color_data = torch.from_numpy(m_input_color_image.astype(np.float32)).permute(3,2,0,1)
         m_input_depth_data = torch.from_numpy(m_input_depth_image.astype(np.float32)).permute(3,2,0,1)
         
-        # Pass input data through model
-        
+        # Pass input data through model        
         if self.method == 'reactive':
             output_prob = self.model.forward(input_depth_data, m_input_depth_data, style, is_volatile, specific_rotation)
             output_prob = output_prob[0].view([1,3,1,1])
-
             output_predictions = np.zeros(len(output_prob))            
             for rotate_idx in range(len(output_prob)):
-                output_predictions = F.softmax(output_prob, dim=1).cpu().data.numpy()[0,0,0]
-                # print('output_prob',F.softmax(output_prob, dim=1))       
+                output_predictions = F.softmax(output_prob, dim=1).cpu().data.numpy()[0,0,0]      
         elif self.method == 'reinforcement':
             if is_target:
                 Q_prob = self.model_target.forward(input_depth_data, m_input_depth_data, style, is_volatile, specific_rotation)
             else:
-                Q_prob = self.model.forward(input_depth_data, m_input_depth_data, style, is_volatile, specific_rotation)            
-        
+                Q_prob = self.model.forward(input_depth_data, m_input_depth_data, style, is_volatile, specific_rotation)                    
             output_predictions = np.zeros(len(Q_prob))            
             for rotate_idx in range(len(Q_prob)):
                 output_predictions[rotate_idx] = Q_prob[rotate_idx].cpu().data.numpy()                                                       
-
         
         return output_predictions             
 
@@ -256,10 +214,8 @@ class Trainer(object):
                         depth_heightmap,mask_depth,objects_mask,
                         bestg_id,bests_id,bestgs_g_id,bestgs_s_id,
                         exploit_action,bestg_conf, bests_conf, bestgs_conf):
-                
-        
+                        
         if self.method == 'reactive':
-
             # Compute label value
             label_value = 0
             if primitive_action == 'suction':
@@ -276,11 +232,9 @@ class Trainer(object):
                     label_value = 0
                 else:
                     label_value = 1
-
             print('Label value: %d' % (label_value))
             return label_value,success_value
-        
-        
+                
         elif self.method == 'reinforcement':
             # Compute current reward            
             current_reward = 0
@@ -290,7 +244,6 @@ class Trainer(object):
                 current_reward = grasp_success
             elif primitive_action == 'grasp_then_suction':
                 current_reward = gs_success
-
             # Compute future reward
             if suction_success ==0 and grasp_success ==0 and gs_success ==0:
                 future_reward = 0
@@ -304,38 +257,17 @@ class Trainer(object):
                 # Q_target(s', argmax(Q(s', a, w)), w')
                                   
                 if exploit_action == 'grasp':
-                    # c_heightmap_mask = color_heightmap * objects_mask[bestg_id[0]]
                     d_heightmap_mask = depth_heightmap * mask_depth[bestg_id[0]]
                     future_reward = self.forward(depth_heightmap, d_heightmap_mask, style=0, is_volatile=True, is_target=True,specific_rotation = bestg_id[1])
-                    # print('future_reward')
-                    # print(future_reward)
-                    # print('GGGGGGGGGGGGG')
-                    future_reward = future_reward[0]
-                    #future_reward = bestg_conf
-                    
-                
+                    future_reward = future_reward[0]                                    
                 elif exploit_action == 'suction':
-                    # c_heightmap_mask = color_heightmap * objects_mask[bests_id[0]]
                     d_heightmap_mask = depth_heightmap * mask_depth[bests_id[0]]
                     future_reward = self.forward(depth_heightmap, d_heightmap_mask, style=1, is_volatile=True, is_target=True,specific_rotation = bests_id[1])
-                    # print('future_reward')
-                    # print(future_reward)
-                    # print('SSSSSSSSSSSSS')
-                    future_reward = future_reward[0]
-                    #future_reward = bests_conf  
-                
-                
-                
-                elif exploit_action == 'grasp_then_suction':                                        
-                    # c_heightmap_mask = color_heightmap * (objects_mask[bestgs_g_id[0]] + objects_mask[bestgs_s_id[0]])
+                    future_reward = future_reward[0]                              
+                elif exploit_action == 'grasp_then_suction':
                     d_heightmap_mask = depth_heightmap * (mask_depth[bestgs_g_id[0]] + mask_depth[bestgs_s_id[0]])
                     future_reward = self.forward(depth_heightmap, d_heightmap_mask, style=2, is_volatile=True, is_target=True, specific_rotation = bestgs_g_id[1])
-                    # print('future_reward')
-                    # print(future_reward)
-                    # print('GGGGGGGSSSSSS')
-                    future_reward = future_reward[0]
-                    #future_reward = bestgs_conf
-                    
+                    future_reward = future_reward[0]                    
             expected_reward = current_reward + self.future_reward_discount * future_reward
             print('Expected reward: %f + %f x %f = %f' % (current_reward, self.future_reward_discount, future_reward, expected_reward))
 
@@ -346,74 +278,51 @@ class Trainer(object):
     def backprop(self, depth_heightmap, primitive_action, 
                  bestg_id, bests_id, bestgs_g_id, bestgs_s_id, 
                  label_value, objects_mask, sro_best, gro_best, bestgs_num):
-        # print('bestg_id, bests_id, bestgs_g_id, bestgs_s_id')
-        # print(bestg_id, bests_id, bestgs_g_id, bestgs_s_id)                
-    
         
-        if self.method == 'reactive':
-        
+        if self.method == 'reactive':        
             # Compute labels
             label = np.zeros((1,1,1))           
             label[0,0,0] = label_value
-
             # Compute loss and backward pass
             mask_depth = objects_mask.copy()            
             objects_mask.shape = (objects_mask.shape[0], objects_mask.shape[1], objects_mask.shape[2], 1)
             self.optimizer.zero_grad()
             loss_value = 0
             if primitive_action == 'grasp':
-                # loss = self.push_criterion(self.model.output_prob[best_pix_ind[0]][0], Variable(torch.from_numpy(label).long().cuda()))
-
                 # Do forward pass with specified rotation (to save gradients)
                 d_heightmap_mask = depth_heightmap * mask_depth[bestg_id[0]]
-                gra_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 0, is_volatile=False, is_target=False, specific_rotation = bestg_id[1])                
-                # print('self.model.gra_prob')
-                # print(self.model.gra_prob[0,0,0,0])
+                gra_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 0, is_volatile=False, is_target=False, specific_rotation = bestg_id[1])
                 if self.use_cuda:
                     loss = self.grasp_criterion(self.model.gra_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long().cuda()))
                 else:
-                    loss = self.grasp_criterion(self.model.gra_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long()))
-                
+                    loss = self.grasp_criterion(self.model.gra_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long()))                
                 loss = loss.sum()
-                # loss.backward()
                 with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                     scaled_loss.backward()
                 loss_value = loss.cpu().data.numpy()
             
             elif primitive_action == 'suction':
-                # loss = self.push_criterion(self.model.output_prob[best_pix_ind[0]][0], Variable(torch.from_numpy(label).long().cuda()))
-
                 # Do forward pass with specified rotation (to save gradients)
                 d_heightmap_mask = depth_heightmap * mask_depth[bests_id[0]]
-                suc_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 1, is_volatile=False, is_target=False, specific_rotation = bests_id[1])                                
-                # print('self.model.suc_prob')
-                # print(self.model.suc_prob[0,0,0,0])
+                suc_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 1, is_volatile=False, is_target=False, specific_rotation = bests_id[1])
                 if self.use_cuda:
                     loss = self.suction_criterion(self.model.suc_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long().cuda()))
                 else:
-                    loss = self.suction_criterion(self.model.suc_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long()))
-                
+                    loss = self.suction_criterion(self.model.suc_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long()))                
                 loss = loss.sum()
-                # loss.backward()
                 with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                     scaled_loss.backward()
                 loss_value = loss.cpu().data.numpy()            
             
             elif primitive_action == 'grasp_then_suction':
-                # loss = self.push_criterion(self.model.output_prob[best_pix_ind[0]][0], Variable(torch.from_numpy(label).long().cuda()))
-
                 # Do forward pass with specified rotation (to save gradients)
                 d_heightmap_mask = depth_heightmap * (mask_depth[bestgs_g_id[0]] + mask_depth[bestgs_s_id[0]])
-                gs_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 2, is_volatile=False, is_target=False, specific_rotation = bestgs_g_id[1])                
-                # print('self.model.gs_prob')
-                # print(self.model.gs_prob[0,0,0,0])
+                gs_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 2, is_volatile=False, is_target=False, specific_rotation = bestgs_g_id[1])
                 if self.use_cuda:
                     loss = self.gs_criterion(self.model.gs_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long().cuda()))
                 else:
-                    loss = self.gs_criterion(self.model.gs_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long()))
-                
+                    loss = self.gs_criterion(self.model.gs_prob[0].view([1,3,1,1]), Variable(torch.from_numpy(label).long()))               
                 loss = loss.sum()
-                # loss.backward()
                 with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                     scaled_loss.backward()
                 loss_value = loss.cpu().data.numpy()  
@@ -421,8 +330,7 @@ class Trainer(object):
             print('Training loss: %f' % (loss_value))
             self.optimizer.step()
             return loss_value
-        
-        
+                
         elif self.method == 'reinforcement':                        
             mask_depth = objects_mask.copy()            
             objects_mask.shape = (objects_mask.shape[0], objects_mask.shape[1], objects_mask.shape[2], 1)            
@@ -431,55 +339,42 @@ class Trainer(object):
             loss_value = 0
             if primitive_action == 'grasp':
                 # Do forward pass with specified rotation (to save gradients)
-                # c_heightmap_mask = color_heightmap * objects_mask[bestg_id[0]]
                 d_heightmap_mask = depth_heightmap * mask_depth[bestg_id[0]]
-                gra_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 0, is_volatile=False, is_target=False, specific_rotation = bestg_id[1])                
-                # print('self.model.gra_prob')
-                # print(self.model.gra_prob[0,0,0,0])
+                gra_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 0, is_volatile=False, is_target=False, specific_rotation = bestg_id[1])
                 if self.use_cuda:
                     if abs(self.model.gra_prob[0,0,0,0]-label_value) < 1:
                         loss = 0.5*((self.model.gra_prob[0,0,0,0]-label_value)**2)
                     else:
                         loss = abs(self.model.gra_prob[0,0,0,0]-label_value) - 0.5              
                 loss = loss.sum()
-                #loss.backward()
                 with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                     scaled_loss.backward()
                 loss_value = loss.cpu().data.numpy()
 
             elif primitive_action == 'suction':
                 # Do forward pass with specified rotation (to save gradients)
-                # c_heightmap_mask = color_heightmap * objects_mask[bests_id[0]]
                 d_heightmap_mask = depth_heightmap * mask_depth[bests_id[0]]
-                suc_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 1, is_volatile=False, is_target=False, specific_rotation = bests_id[1])                                
-                # print('self.model.suc_prob')
-                # print(self.model.suc_prob[0,0,0,0])
+                suc_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 1, is_volatile=False, is_target=False, specific_rotation = bests_id[1])
                 if self.use_cuda:
                     if abs(self.model.suc_prob[0,0,0,0]-label_value) < 1:
                         loss = 0.5*((self.model.suc_prob[0,0,0,0]-label_value)**2)
                     else:
                         loss = abs(self.model.suc_prob[0,0,0,0]-label_value) - 0.5            
                 loss = loss.sum()
-                #loss.backward()
                 with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                     scaled_loss.backward()
                 loss_value = loss.cpu().data.numpy()
 
             elif primitive_action == 'grasp_then_suction':                
                 # Do forward pass with specified rotation (to save gradients)
-                # c_heightmap_mask = color_heightmap * (objects_mask[bestgs_g_id[0]] + objects_mask[bestgs_s_id[0]])
                 d_heightmap_mask = depth_heightmap * (mask_depth[bestgs_g_id[0]] + mask_depth[bestgs_s_id[0]])
-                gs_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 2, is_volatile=False, is_target=False, specific_rotation = bestgs_g_id[1])                
-                # print('self.model.gs_prob')
-                # print(self.model.gs_prob[0,0,0,0])
+                gs_conf = self.forward(depth_heightmap, d_heightmap_mask, style = 2, is_volatile=False, is_target=False, specific_rotation = bestgs_g_id[1])
                 if self.use_cuda:
                     if abs(self.model.gs_prob[0,0,0,0]-label_value) < 1:
                         loss = 0.5*((self.model.gs_prob[0,0,0,0]-label_value)**2)
                     else:
                         loss = abs(self.model.gs_prob[0,0,0,0]-label_value) - 0.5                
-                # print('AAAAA loss AAAAA: %r' % (loss))
                 loss = loss.sum()
-                #loss.backward()
                 with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                     scaled_loss.backward()
                 loss_value = loss.cpu().data.numpy()                        
@@ -488,8 +383,6 @@ class Trainer(object):
             self.optimizer.step()
             return loss_value
             
-
-
 
 
 
