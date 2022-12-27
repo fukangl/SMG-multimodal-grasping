@@ -12,7 +12,7 @@
 If you have any questions, please let me know: [Fukang Liu](https://fukangl.github.io/) fukangl[at]andrew[dot]cmu[dot]edu
 
 
-<img src="images/SMG.jpg" width="600">
+<img src="images/SMG.jpg" width="1000">
 
 
 ## Installation
