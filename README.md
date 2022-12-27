@@ -19,7 +19,7 @@ The implementation requires the following dependencies:
 
 1. Checkout this repository and download the [datasets](https://github.com/fukangl/SMG-multimodal-grasping/blob/main/datasets-objects.zip).
 
-1. Run CoppeliaSim ().
+1. Run CoppeliaSim (navigate to your CoppeliaSim directory and run `./coppeliaSim.sh`). From the main menu, select `File` > `Open scene...`, and open the file `simulation-lc.ttt`(lightly-cluttered) or `simulation-hc.ttt`(highly-cluttered) from this repository.
 
 
 
