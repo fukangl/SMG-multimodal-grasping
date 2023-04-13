@@ -19,7 +19,7 @@ If you have any questions, please let me know: [Fukang Liu](https://fukangl.gith
 
 The implementation requires the following dependencies:
 
-* [Python](https://www.python.org/), [PyTorch](https://pytorch.org/), [NumPy](https://numpy.org/), [OpenCV-Python](https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html), [SciPy](https://scipy.org/), [Matplotlib](https://matplotlib.org/), [CoppeliaSim](https://www.coppeliarobotics.com/)</br> 
+* [Python3](https://www.python.org/), [PyTorch 1.0+](https://pytorch.org/), [NumPy](https://numpy.org/), [OpenCV-Python](https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html), [SciPy](https://scipy.org/), [Matplotlib](https://matplotlib.org/), [CoppeliaSim](https://www.coppeliarobotics.com/)</br> 
 
 
 ## Instructions
