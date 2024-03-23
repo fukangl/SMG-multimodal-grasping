@@ -9,7 +9,7 @@ IEEE Transactions on Robotics (TRO) 2023 [[Paper]](https://browse.arxiv.org/pdf/
 <sup>3</sup> University of California, Los Angeles </br> 
 
 #### Contact
-If you have any questions, please let me know: [Fukang Liu](https://fukangl.github.io/) fukangl[at]andrew[dot]cmu[dot]edu
+If you have any questions, please let me know: [Fukang Liu](https://fukangl.github.io/) fukangliu[at]gatech[dot]edu
 
 
 <img src="images/SMG.jpg" width="1000">
