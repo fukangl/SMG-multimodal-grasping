@@ -1,6 +1,6 @@
 ## Hybrid Robotic Grasping with a Soft Multimodal Gripper and a Deep Multistage Learning Scheme
 
-IEEE Transactions on Robotics (TRO) 2023 [[Paper]](https://browse.arxiv.org/pdf/2202.12796.pdf)
+IEEE Transactions on Robotics (TRO) 2023 [[Paper]](https://browse.arxiv.org/pdf/2202.12796.pdf) [[Video]](https://youtu.be/C_6_rop876M)
 
 [Fukang Liu](https://fukangl.github.io/)<sup>1,2</sup>,[Fuchun Sun](https://scholar.google.com/citations?user=DbviELoAAAAJ&hl=en)<sup>2</sup>,[Bin Fang](https://scholar.google.com/citations?user=5G47IcIAAAAJ&hl=en)<sup>2</sup>,[Xiang Li](https://scholar.google.com/citations?user=6EIX-JQAAAAJ&hl=en)<sup>2</sup>,Songyu Sun<sup>3</sup>,[Huaping Liu](https://scholar.google.com/citations?user=HXnkIkwAAAAJ&hl=en)<sup>2</sup><br/>
 
